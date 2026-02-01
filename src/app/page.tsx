@@ -879,7 +879,7 @@ function HomeContent() {
               className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-all hover:text-pink-400 group"
             >
               <Instagram className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-              <span className="text-sm tracking-wide">Know more about us!</span>
+              <span className="text-sm tracking-wide">Persented by Euonikos</span>
             </a>
           </div>
         </footer>
