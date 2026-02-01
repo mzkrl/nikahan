@@ -27,6 +27,60 @@ const PLAYLIST = [
   "/music/Wedding Nasheed.webm"
 ];
 
+// ==================== LOADER COMPONENT ====================
+function CustomLoader({ onFinish }: { onFinish: () => void }) {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    // Simulate asset loading - longer duration for heavyweight feel
+    const duration = 2500; // 2.5 seconds load time
+    const interval = 20;
+    const steps = duration / interval;
+    let currentStep = 0;
+
+    const timer = setInterval(() => {
+      currentStep++;
+      const newProgress = Math.min((currentStep / steps) * 100, 100);
+      setProgress(newProgress);
+
+      if (currentStep >= steps) {
+        clearInterval(timer);
+        setTimeout(onFinish, 500); // Small delay after 100%
+      }
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [onFinish]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#fdfbf7] text-amber-600"
+      exit={{ opacity: 0, y: -50 }}
+      transition={{ duration: 0.8, ease: "easeInOut" }}
+    >
+      <motion.div
+        animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <Heart className="w-16 h-16 fill-current mb-8" />
+      </motion.div>
+
+      <h2 className="font-script text-3xl md:text-5xl mb-6">Dimas & Davina</h2>
+
+      <div className="w-64 h-1 bg-amber-200 rounded-full overflow-hidden relative">
+        <motion.div
+          className="h-full bg-amber-600 absolute left-0 top-0"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <p className="mt-4 text-sm tracking-widest uppercase opacity-60">
+        {progress < 100 ? "Loading Memories..." : "Ready"}
+      </p>
+    </motion.div>
+  );
+}
+
 // ==================== HYDRATION FIX HELPER ====================
 function ClientOnly({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -63,13 +117,12 @@ function FloatingHearts() {
           }}
         >
           <Heart
-            className="opacity-20"
+            className="opacity-20 text-amber-400"
             style={{
-              color: "#c9a050",
               width: 10 + Math.random() * 20,
               height: 10 + Math.random() * 20,
             }}
-            fill="#c9a050"
+            fill="currentColor"
           />
         </motion.div>
       ))}
@@ -109,13 +162,22 @@ function SparkleEffect() {
   );
 }
 
-// ==================== 3D TILT CARD ====================
+// ==================== 3D TILT CARD (DISABLED ON MOBILE) ====================
 function TiltCard({ children }: { children: React.ReactNode }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-
   const mouseX = useSpring(x);
   const mouseY = useSpring(y);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.matchMedia("(max-width: 768px)").matches);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  if (isMobile) return <div className="w-full">{children}</div>;
 
   function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
     const { left, top, width, height } = currentTarget.getBoundingClientRect();
@@ -130,15 +192,12 @@ function TiltCard({ children }: { children: React.ReactNode }) {
     y.set(0);
   }
 
-  const rotateX = useTransform(mouseY, [-0.5, 0.5], [10, -10]);
-  const rotateY = useTransform(mouseX, [-0.5, 0.5], [-10, 10]);
-
   return (
     <motion.div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-      className="perspective-1000"
+      style={{ rotateX: useTransform(mouseY, [-0.5, 0.5], [10, -10]), rotateY: useTransform(mouseX, [-0.5, 0.5], [-10, 10]), transformStyle: "preserve-3d" }}
+      className="perspective-1000 w-full flex justify-center"
     >
       {children}
     </motion.div>
@@ -148,18 +207,18 @@ function TiltCard({ children }: { children: React.ReactNode }) {
 // ==================== ANIMATED SECTION ====================
 function AnimatedSection({ children, className = "", delay = 0, style }: { children: React.ReactNode; className?: string; delay?: number; style?: React.CSSProperties }) {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const isInView = useInView(ref, { once: true, margin: "-10%" }); // Trigger earlier on mobile
 
   return (
     <motion.section
       ref={ref}
-      className={`py-16 md:py-24 px-4 md:px-8 ${className}`}
+      className={`py-12 md:py-24 px-4 md:px-8 ${className}`}
       style={style}
-      initial={{ opacity: 0, y: 80 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 80 }}
+      initial={{ opacity: 0, y: 50 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
       transition={{ duration: 0.8, delay, ease: "easeOut" }}
     >
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto w-full">
         {children}
       </div>
     </motion.section>
@@ -181,22 +240,21 @@ function WelcomeOverlay({ guest, onComplete, onPlayMusic }: { guest: Guest; onCo
   }, []);
 
   const handleOpen = () => {
-    onPlayMusic(); // Trigger play on user interaction!
+    onPlayMusic();
     onComplete();
   };
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden px-4"
       style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }}
       initial={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
       transition={{ duration: 1.2, ease: "easeInOut" }}
     >
-      {/* Background stars - ClientOnly for hydration safety */}
       <ClientOnly>
         <div className="absolute inset-0 overflow-hidden">
-          {[...Array(80)].map((_, i) => (
+          {[...Array(60)].map((_, i) => (
             <motion.div
               key={i}
               className="absolute rounded-full bg-white"
@@ -221,38 +279,34 @@ function WelcomeOverlay({ guest, onComplete, onPlayMusic }: { guest: Guest; onCo
         </div>
       </ClientOnly>
 
-      {/* Glowing orbs */}
-      <motion.div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/20 rounded-full blur-[100px]" animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }} transition={{ duration: 4, repeat: Infinity }} />
-
-      <div className="relative z-10 text-center px-6 max-w-3xl">
+      <div className="relative z-10 text-center w-full max-w-lg mx-auto">
         <AnimatePresence mode="wait">
           {stage >= 1 && (
             <motion.div
               key="hello"
-              initial={{ opacity: 0, y: 50, scale: 0.8 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
             >
-              <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-                <Sparkles className="w-10 h-10 mx-auto mb-4 text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]" />
-              </motion.div>
-              <p className="text-white/80 text-xl md:text-2xl tracking-[0.3em] uppercase font-light">Hello</p>
+              <Sparkles className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-4 text-amber-300 animate-pulse" />
+              <p className="text-white/80 text-lg md:text-2xl tracking-[0.3em] uppercase font-light">Hello</p>
             </motion.div>
           )}
         </AnimatePresence>
 
         <AnimatePresence mode="wait">
           {stage >= 2 && (
-            <motion.h1
+            <motion.div
               key="name"
-              className="text-4xl md:text-6xl lg:text-7xl font-script my-8 text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200"
-              style={{ filter: "drop-shadow(0 0 20px rgba(230, 185, 128, 0.4))" }}
-              initial={{ opacity: 0, scale: 0.5, rotateX: 90 }}
-              animate={{ opacity: 1, scale: 1, rotateX: 0 }}
-              transition={{ duration: 1.2, type: "spring", bounce: 0.4 }}
+              className="my-8"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring" }}
             >
-              {guest.name}
-            </motion.h1>
+              <h1 className="text-4xl md:text-6xl font-script text-amber-200 drop-shadow-xl break-words px-2 leading-tight">
+                {guest.name}
+              </h1>
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -262,9 +316,9 @@ function WelcomeOverlay({ guest, onComplete, onPlayMusic }: { guest: Guest; onCo
               key="present"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.8 }}
+              className="mb-8"
             >
-              <p className="text-white/90 text-lg md:text-xl tracking-wide font-light border-y border-white/20 py-2 inline-block">
+              <p className="text-white/80 text-base md:text-xl tracking-wide font-light border-y border-white/10 py-2 inline-block">
                 We proudly present you to
               </p>
             </motion.div>
@@ -275,28 +329,26 @@ function WelcomeOverlay({ guest, onComplete, onPlayMusic }: { guest: Guest; onCo
           {stage >= 4 && (
             <motion.div
               key="wedding"
-              initial={{ opacity: 0, y: 50 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="mt-8"
+              transition={{ duration: 1 }}
+              className="mt-4"
             >
-              <p className="text-white/60 text-sm tracking-[0.5em] uppercase mb-4">The Wedding of</p>
-              <h2 className="text-5xl md:text-7xl lg:text-8xl font-script text-white mb-12 drop-shadow-2xl">
-                Dimas & Davina
+              <p className="text-white/60 text-xs md:text-sm tracking-[0.4em] uppercase mb-4">The Wedding of</p>
+              <h2 className="text-5xl md:text-7xl font-script text-white mb-10 drop-shadow-2xl leading-none">
+                Dimas <br /> <span className="text-3xl md:text-5xl opacity-50">&</span> <br /> Davina
               </h2>
 
               <motion.button
                 onClick={handleOpen}
-                className="px-12 py-5 rounded-full text-white font-medium shadow-2xl transition-all relative overflow-hidden group border border-white/20 backdrop-blur-sm"
-                style={{ background: "linear-gradient(135deg, rgba(230,185,128,0.8) 0%, rgba(201,160,80,0.8) 100%)" }}
-                whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(230, 185, 128, 0.6)" }}
+                className="w-full max-w-xs md:max-w-md px-8 py-4 rounded-full text-white font-medium shadow-2xl relative overflow-hidden group border border-white/20 backdrop-blur-md"
+                style={{ background: "linear-gradient(135deg, rgba(230,185,128,0.9) 0%, rgba(201,160,80,0.9) 100%)" }}
                 whileTap={{ scale: 0.95 }}
               >
-                <div className="absolute inset-0 bg-white/30 skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                <span className="relative flex items-center gap-2 text-lg tracking-widest uppercase">
-                  <Sparkles className="w-5 h-5 animate-pulse" />
+                <span className="relative flex items-center justify-center gap-3 text-sm md:text-lg tracking-widest uppercase">
+                  <Sparkles className="w-4 h-4 md:w-5 md:h-5 animate-pulse" />
                   Open Invitation
-                  <Sparkles className="w-5 h-5 animate-pulse" />
+                  <Sparkles className="w-4 h-4 md:w-5 md:h-5 animate-pulse" />
                 </span>
               </motion.button>
             </motion.div>
@@ -313,7 +365,7 @@ function HomeContent() {
   const guestSlug = searchParams.get("guest");
 
   const [guest, setGuest] = useState<Guest | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // App level loading
   const [isMuted, setIsMuted] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -337,7 +389,6 @@ function HomeContent() {
   // Fetch guest
   useEffect(() => {
     if (guestSlug) {
-      setIsLoading(true);
       fetch(`/api/guests/slug/${guestSlug}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
@@ -349,18 +400,14 @@ function HomeContent() {
             }
           }
         })
-        .finally(() => setIsLoading(false));
+        .finally(() => { });
     }
   }, [guestSlug]);
 
-  // Handle Play Music - Triggered by interaction
   const handlePlayMusic = () => {
     if (audioRef.current) {
       audioRef.current.volume = 0.5;
-      audioRef.current.play().catch(e => {
-        console.warn("Autoplay failed, must interact", e);
-        setIsMuted(true);
-      });
+      audioRef.current.play().catch(() => setIsMuted(true));
       setIsMuted(false);
     }
   };
@@ -373,9 +420,8 @@ function HomeContent() {
     setCurrentSongIndex(nextIndex);
   };
 
-  // Auto-play effect for song change
   useEffect(() => {
-    if (audioRef.current && !isMuted && !showWelcome) {
+    if (audioRef.current && !isMuted && !showWelcome && !loading) {
       audioRef.current.play().catch(() => setIsMuted(true));
     }
   }, [currentSongIndex]);
@@ -393,18 +439,15 @@ function HomeContent() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-background">
-        <Loader2 className="w-12 h-12 text-amber-500 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <>
+      {/* Heavy Preloader */}
+      <AnimatePresence mode="wait">
+        {loading && <CustomLoader onFinish={() => setLoading(false)} />}
+      </AnimatePresence>
+
       <AnimatePresence>
-        {showWelcome && guest && (
+        {!loading && showWelcome && guest && (
           <WelcomeOverlay
             guest={guest}
             onComplete={() => {
@@ -423,24 +466,18 @@ function HomeContent() {
         preload="auto"
       />
 
-      {/* Background Ambience */}
-      <ClientOnly>
-        <FloatingHearts />
-      </ClientOnly>
-
       {/* FAB Music */}
-      {!showWelcome && (
+      {!loading && !showWelcome && (
         <motion.button
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           onClick={toggleMusic}
-          className="fixed bottom-6 right-6 z-50 p-4 rounded-full text-white shadow-2xl glass-effect"
+          className="fixed bottom-6 right-6 z-50 p-3 md:p-4 rounded-full text-white shadow-2xl glass-effect"
           style={{ backgroundColor: "rgba(201, 160, 80, 0.9)", backdropFilter: "blur(4px)" }}
-          whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
           <motion.div animate={!isMuted ? { scale: [1, 1.2, 1] } : {}} transition={{ repeat: Infinity, duration: 1 }}>
-            {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+            {isMuted ? <VolumeX className="w-5 h-5 md:w-6 md:h-6" /> : <Volume2 className="w-5 h-5 md:w-6 md:h-6" />}
           </motion.div>
           {!isMuted && (
             <span className="absolute -inset-1 rounded-full animate-ping bg-amber-500/30" />
@@ -448,16 +485,18 @@ function HomeContent() {
         </motion.button>
       )}
 
-      <div className="overflow-x-hidden bg-[#fdfbf7] text-[#4a4a4a]">
+      {/* Main Content */}
+      <div className={`overflow-x-hidden bg-[#fdfbf7] text-[#4a4a4a] ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-1000`}>
+        <ClientOnly> <FloatingHearts /> </ClientOnly>
 
         {/* HERO SECTION */}
         <motion.section
           ref={heroRef}
-          className="relative h-screen w-full flex flex-col items-center justify-center text-center px-4 overflow-hidden"
+          className="relative h-[100dvh] w-full flex flex-col items-center justify-center text-center px-4 overflow-hidden"
           style={{ opacity: heroOpacity, y: heroY }}
         >
-          <div className="absolute inset-0 z-0">
-            <div className="absolute inset-0 bg-black/40 z-10" />
+          <div className="absolute inset-0 z-0 select-none">
+            <div className="absolute inset-0 bg-black/30 z-10" />
             <motion.img
               src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=2070&auto=format&fit=crop"
               alt="Wedding Flowers"
@@ -468,12 +507,12 @@ function HomeContent() {
 
           <ClientOnly> <SparkleEffect /> </ClientOnly>
 
-          <div className="relative z-20 text-white max-w-4xl mx-auto space-y-8">
+          <div className="relative z-20 text-white w-full max-w-4xl mx-auto flex flex-col items-center gap-6 md:gap-8 px-4">
             <motion.p
-              initial={{ y: -50, opacity: 0 }}
+              initial={{ y: -30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5, duration: 1 }}
-              className="text-lg md:text-xl font-medium tracking-[0.4em] uppercase"
+              transition={{ delay: 0.5 }}
+              className="text-sm md:text-xl font-medium tracking-[0.3em] uppercase"
             >
               The Wedding of
             </motion.p>
@@ -482,16 +521,16 @@ function HomeContent() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.8, type: "spring", duration: 1.5 }}
-              className="font-script text-6xl md:text-8xl lg:text-9xl drop-shadow-lg text-amber-200"
+              className="font-script text-5xl md:text-8xl lg:text-9xl drop-shadow-2xl text-amber-100 leading-tight"
             >
-              Dimas & Davina
+              Dimas <br className="md:hidden" /> <span className="text-3xl md:text-6xl align-middle">&</span> <br className="md:hidden" /> Davina
             </motion.h1>
 
             <motion.p
-              initial={{ y: 50, opacity: 0 }}
+              initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 1.2, duration: 1 }}
-              className="text-xl md:text-2xl font-serif italic"
+              transition={{ delay: 1.2 }}
+              className="text-lg md:text-2xl font-serif italic border-y border-white/30 py-2 px-8"
             >
               Monday, 02 February 2026
             </motion.p>
@@ -502,90 +541,72 @@ function HomeContent() {
             animate={{ y: [0, 10, 0], opacity: [0.5, 1, 0.5] }}
             transition={{ repeat: Infinity, duration: 2 }}
           >
-            <div className="w-6 h-10 border-2 border-white rounded-full flex justify-center p-1">
+            <div className="w-5 h-9 border-2 border-white rounded-full flex justify-center p-1">
               <div className="w-1 h-2 bg-white rounded-full animate-bounce" />
             </div>
           </motion.div>
         </motion.section>
 
         {/* BRIDE & GROOM SECTION */}
-        <div className="relative py-24 overflow-hidden">
-          <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
-
-          {/* Groom */}
-          <div className="max-w-6xl mx-auto px-4 mb-24">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="relative py-16 md:py-24 overflow-hidden">
+          <div className="max-w-6xl mx-auto px-4 md:px-8">
+            {/* Groom */}
+            <div className="grid md:grid-cols-2 gap-8 md:gap-16 items-center mb-20 md:mb-32">
               <motion.div
-                initial={{ opacity: 0, x: -100 }}
+                initial={{ opacity: 0, x: -30 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, type: "spring" }}
+                transition={{ duration: 0.8 }}
                 className="text-center md:text-right order-2 md:order-1"
               >
-                <div className="flex items-center justify-center md:justify-end gap-2 mb-4">
-                  <div className="h-[2px] w-12 bg-amber-500" />
-                  <span className="text-amber-600 font-bold tracking-widest uppercase">The Groom</span>
+                <div className="flex items-center justify-center md:justify-end gap-3 mb-4">
+                  <div className="h-[1px] w-8 md:w-16 bg-amber-500" />
+                  <span className="text-amber-600/80 font-bold tracking-[0.2em] text-xs md:text-sm uppercase">The Groom</span>
                 </div>
-                <h2 className="text-5xl md:text-6xl font-script text-amber-600 mb-6 drop-shadow-sm">Dimas Saktiawan</h2>
-                <p className="text-gray-600 leading-relaxed text-lg mb-6">
+                <h2 className="text-4xl md:text-6xl font-script text-amber-700 mb-4 md:mb-6">Dimas Saktiawan</h2>
+                <p className="text-gray-600 leading-relaxed text-base md:text-lg mb-6">
                   Putra dari Bpk. Alan & Ibu Alfatiha.<br />
-                  Seorang pria yang penuh semangat dan mencintai teknologi. Baginya, cinta adalah kode yang tak perlu di-debug.
+                  Pecinta teknologi yang percaya bahwa cinta sejati adalah algoritma tanpa batas.
                 </p>
-                <div className="flex justify-center md:justify-end gap-4 text-amber-600">
+                <div className="flex justify-center md:justify-end gap-6 text-amber-600/70">
                   <Camera className="w-6 h-6" /> <Music className="w-6 h-6" />
                 </div>
               </motion.div>
 
-              <div className="flex justify-center md:justify-start order-1 md:order-2">
+              <div className="flex justify-center md:justify-start order-1 md:order-2 w-full">
                 <TiltCard>
-                  <motion.div
-                    initial={{ scale: 0.8, rotate: -5 }}
-                    whileInView={{ scale: 1, rotate: 3 }}
-                    viewport={{ once: true }}
-                    className="relative w-72 h-96 border-[12px] border-white shadow-2xl rounded-lg overflow-hidden"
-                  >
+                  <div className="relative w-64 h-80 md:w-80 md:h-[450px] border-[8px] md:border-[12px] border-white shadow-xl rounded-xl overflow-hidden transform rotate-2 md:rotate-3">
                     <img src="/dimas.jpg" alt="Dimas" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  </motion.div>
+                  </div>
                 </TiltCard>
               </div>
             </div>
-          </div>
 
-          {/* Bride */}
-          <div className="max-w-6xl mx-auto px-4">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div className="flex justify-center md:justify-end">
+            {/* Bride */}
+            <div className="grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+              <div className="flex justify-center md:justify-end w-full">
                 <TiltCard>
-                  <motion.div
-                    initial={{ scale: 0.8, rotate: 5 }}
-                    whileInView={{ scale: 1, rotate: -3 }}
-                    viewport={{ once: true }}
-                    className="relative w-72 h-96 border-[12px] border-white shadow-2xl rounded-lg overflow-hidden"
-                  >
+                  <div className="relative w-64 h-80 md:w-80 md:h-[450px] border-[8px] md:border-[12px] border-white shadow-xl rounded-xl overflow-hidden transform -rotate-2 md:-rotate-3">
                     <img src="/davina.jpeg" alt="Davina" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  </motion.div>
+                  </div>
                 </TiltCard>
               </div>
 
               <motion.div
-                initial={{ opacity: 0, x: 100 }}
+                initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, type: "spring" }}
+                transition={{ duration: 0.8 }}
                 className="text-center md:text-left"
               >
-                <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
-                  <span className="text-amber-600 font-bold tracking-widest uppercase">The Bride</span>
-                  <div className="h-[2px] w-12 bg-amber-500" />
+                <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
+                  <span className="text-amber-600/80 font-bold tracking-[0.2em] text-xs md:text-sm uppercase">The Bride</span>
+                  <div className="h-[1px] w-8 md:w-16 bg-amber-500" />
                 </div>
-                <h2 className="text-5xl md:text-6xl font-script text-amber-600 mb-6 drop-shadow-sm">Davina Anandia</h2>
-                <p className="text-gray-600 leading-relaxed text-lg mb-6">
+                <h2 className="text-4xl md:text-6xl font-script text-amber-700 mb-4 md:mb-6">Davina Anandia</h2>
+                <p className="text-gray-600 leading-relaxed text-base md:text-lg mb-6">
                   Putri dari Bpk. Zufar & Ibu Intan.<br />
-                  Wanita anggun dengan senyum yang menghangatkan hati. Baginya, kebahagiaan adalah perjalanan, bukan tujuan.
+                  Wanita dengan senyuman hangat yang mampu menerangi setiap sudut hari.
                 </p>
-                <div className="flex justify-center md:justify-start gap-4 text-amber-600">
+                <div className="flex justify-center md:justify-start gap-6 text-amber-600/70">
                   <Heart className="w-6 h-6" /> <Camera className="w-6 h-6" />
                 </div>
               </motion.div>
@@ -593,125 +614,82 @@ function HomeContent() {
           </div>
         </div>
 
-        {/* STORY SECTION */}
-        <section className="py-24 bg-amber-50 relative">
-          <div className="max-w-4xl mx-auto px-6">
-            <motion.div className="text-center mb-16" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <h2 className="text-5xl font-script text-amber-700 mb-4">Our Love Story</h2>
-              <p className="text-amber-600 uppercase tracking-widest">How We Met</p>
+        {/* STORY SECTION - Optimized for Mobile */}
+        <section className="py-20 md:py-32 bg-amber-50 relative">
+          <div className="max-w-4xl mx-auto px-4 md:px-6">
+            <motion.div className="text-center mb-12 md:mb-20">
+              <h2 className="text-4xl md:text-5xl font-script text-amber-700 mb-3">Our Love Story</h2>
+              <p className="text-amber-600 uppercase tracking-widest text-xs md:text-sm">Small steps, huge journey</p>
             </motion.div>
 
             <div className="relative">
-              {/* Vertical Linet */}
-              <motion.div
-                className="absolute left-1/2 top-0 bottom-0 w-1 bg-amber-200/50 -translate-x-1/2 hidden md:block rounded-full"
-                initial={{ height: 0 }}
-                whileInView={{ height: "100%" }}
-                viewport={{ once: true }}
-                transition={{ duration: 2 }}
-              />
+              {/* Vertical Line (Hidden on mobile) */}
+              <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-amber-200 -translate-x-1/2 rounded-full" />
 
               {[
-                { year: "2023", title: "First Encounter", desc: "Awal perjumpaan di bangku sekolah SMK. Hanya teman sekelas yang saling berbagi catatan.", align: "right" },
-                { year: "2025", title: "The Spark", desc: "Sebuah balasan Story Instagram yang sederhana memicu percakapan tak berujung hingga larut malam.", align: "left" },
-                { year: "2026", title: "She Said Yes!", desc: "Di bawah langit Jakarta yang berbintang, janji suci terucap untuk selamanya.", align: "right" }
+                { year: "2023", title: "First Encounter", desc: "Pertama kali bertemu di SMK. Hanya sekadar teman sekelas biasa.", align: "right" },
+                { year: "2025", title: "The Spark", desc: "Reply story Instagram yang berlanjut menjadi percakapan panjang.", align: "left" },
+                { year: "2026", title: "Forever", desc: "Berjanji untuk saling menemani dalam suka dan duka selamanya.", align: "right" }
               ].map((item, i) => (
-                <div key={i} className="relative grid md:grid-cols-2 gap-8 mb-12 items-center">
-                  {/* Timeline Dot */}
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:block z-10">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      whileInView={{ scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.5 + (i * 0.2), type: "spring" }}
-                      className="w-6 h-6 bg-amber-500 rounded-full border-4 border-amber-100 shadow-lg"
-                    />
+                <div key={i} className="relative grid grid-cols-[30px_1fr] md:grid-cols-2 gap-4 md:gap-8 mb-10 md:mb-12 items-start md:items-center">
+
+                  {/* Dot */}
+                  <div className="absolute left-4 md:left-1/2 top-0 md:top-1/2 -translate-x-1/2 md:-translate-y-1/2 z-10">
+                    <div className="w-4 h-4 md:w-6 md:h-6 bg-amber-500 rounded-full border-4 border-amber-100" />
                   </div>
 
-                  {item.align === "left" ? (
-                    <>
-                      <motion.div
-                        initial={{ opacity: 0, x: -50, rotateY: 15 }}
-                        whileInView={{ opacity: 1, x: 0, rotateY: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: i * 0.2 }}
-                        className="bg-white p-6 rounded-2xl shadow-xl border border-amber-100 relative group hover:scale-105 transition-transform duration-300"
-                      >
-                        <div className="absolute -right-2 top-1/2 w-4 h-4 bg-white transform rotate-45 hidden md:block" />
-                        <span className="text-3xl font-bold text-amber-200/40 absolute top-2 right-4">{item.year}</span>
-                        <h3 className="text-xl font-bold text-amber-700 mb-2">{item.title}</h3>
-                        <p className="text-gray-600">{item.desc}</p>
-                      </motion.div>
-                      <div className="hidden md:block" />
-                    </>
-                  ) : (
-                    <>
-                      <div className="hidden md:block" />
-                      <motion.div
-                        initial={{ opacity: 0, x: 50, rotateY: -15 }}
-                        whileInView={{ opacity: 1, x: 0, rotateY: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: i * 0.2 }}
-                        className="bg-white p-6 rounded-2xl shadow-xl border border-amber-100 relative group hover:scale-105 transition-transform duration-300 md:text-right"
-                      >
-                        <div className="absolute -left-2 top-1/2 w-4 h-4 bg-white transform rotate-45 hidden md:block" />
-                        <span className="text-3xl font-bold text-amber-200/40 absolute top-2 left-4">{item.year}</span>
-                        <h3 className="text-xl font-bold text-amber-700 mb-2">{item.title}</h3>
-                        <p className="text-gray-600">{item.desc}</p>
-                      </motion.div>
-                    </>
-                  )}
+                  {/* Spacer for Desktop Alignment */}
+                  {item.align === "right" ? <div className="hidden md:block" /> : null}
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className={`col-start-2 bg-white p-6 rounded-2xl shadow-sm border border-amber-100 relative ${item.align === "left" && "md:text-right"}`}
+                  >
+                    <span className="text-4xl font-bold text-amber-100 absolute top-2 right-4 md:left-auto md:right-4 select-none">{item.year}</span>
+                    <h3 className="text-lg md:text-xl font-bold text-amber-700 mb-2 relative z-10">{item.title}</h3>
+                    <p className="text-sm md:text-base text-gray-600 relative z-10">{item.desc}</p>
+                  </motion.div>
+
+                  {/* Spacer for Desktop Alignment */}
+                  {item.align === "left" ? <div className="hidden md:block" /> : null}
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* EVENT DETAILS */}
+        {/* EVENT DETAILS - Mobile Card Stack */}
         <AnimatedSection>
-          <div className="grid lg:grid-cols-2 gap-16 items-start">
-            <div className="space-y-10">
-              <div className="space-y-4">
-                <p className="font-bold tracking-widest uppercase text-amber-600">The Details</p>
-                <h2 className="text-5xl font-serif text-gray-800">Save The Date</h2>
-                <p className="text-lg text-gray-600">
-                  Kami menantikan kehadiran Anda untuk merayakan hari bahagia ini.
-                </p>
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
+            <div className="space-y-8 md:space-y-10 order-2 lg:order-1">
+              <div className="space-y-2 md:space-y-4 text-center lg:text-left">
+                <p className="font-bold tracking-widest uppercase text-amber-600 text-sm">The Details</p>
+                <h2 className="text-4xl md:text-5xl font-serif text-gray-800">Save The Date</h2>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {[
-                  { icon: Calendar, title: "Holy Matrimony", info: "Monday, 02 February 2026", sub: "08:00 AM - 10:00 AM" },
-                  { icon: Clock, title: "Wedding Reception", info: "Monday, 02 February 2026", sub: "11:00 AM - 01:00 PM" },
+                  { icon: Calendar, title: "Holy Matrimony", info: "Monday, 02 February 2026", sub: "08:00 AM" },
+                  { icon: Clock, title: "Wedding Reception", info: "Monday, 02 February 2026", sub: "11:00 AM" },
                   { icon: MapPin, title: "Location", info: "Politeknik Prestasi Prima", sub: "Jakarta Timur" }
                 ].map((item, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ x: -30, opacity: 0 }}
-                    whileInView={{ x: 0, opacity: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                    whileHover={{ scale: 1.02 }}
-                    className="flex items-center gap-6 p-6 rounded-2xl bg-white shadow-lg border border-amber-50"
-                  >
-                    <div className="bg-amber-100 p-4 rounded-full text-amber-600">
-                      <item.icon className="w-6 h-6" />
+                  <div key={i} className="flex items-center gap-4 md:gap-6 p-4 md:p-6 rounded-2xl bg-white shadow-md border border-amber-50 hover:shadow-lg transition-shadow">
+                    <div className="bg-amber-100 p-3 rounded-full text-amber-600 shrink-0">
+                      <item.icon className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
-                      <p className="text-gray-600">{item.info}</p>
-                      <p className="text-amber-500 text-sm font-medium">{item.sub}</p>
+                      <h3 className="text-lg md:text-xl font-bold text-gray-800">{item.title}</h3>
+                      <p className="text-sm md:text-base text-gray-600">{item.info}</p>
+                      <p className="text-amber-500 text-xs md:text-sm font-medium">{item.sub}</p>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </div>
 
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              whileInView={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.8 }}
-              className="h-[500px] w-full bg-white p-2 shadow-2xl rounded-3xl"
-            >
+            <div className="h-[300px] md:h-[500px] w-full bg-white p-2 shadow-2xl rounded-3xl order-1 lg:order-2 overflow-hidden">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.4!2d106.907!3d-6.321!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTknMTYuMCJTIDEwNsKwNTQnMjUuOCJF!5e0!3m2!1sen!2sid!4v1234567890"
                 width="100%"
@@ -720,19 +698,19 @@ function HomeContent() {
                 allowFullScreen
                 loading="lazy"
               />
-            </motion.div>
+            </div>
           </div>
         </AnimatedSection>
 
-        {/* RSVP FORM - Only show if guest param exists */}
+        {/* RSVP CARD */}
         {guest && (
-          <section className="py-24 bg-gradient-to-br from-amber-50 to-white relative overflow-hidden">
-            <div className="max-w-xl mx-auto px-6 relative z-10 text-center">
-              <Quote className="w-12 h-12 text-amber-200 mx-auto mb-6 transform rotate-180" />
-              <h2 className="text-4xl font-serif mb-8">RSVP</h2>
+          <section className="py-16 md:py-24 px-4 bg-gradient-to-t from-amber-50 to-white">
+            <div className="max-w-xl mx-auto relative z-10 text-center">
+              <Quote className="w-8 h-8 md:w-12 md:h-12 text-amber-200 mx-auto mb-4 md:mb-6 transform rotate-180" />
+              <h2 className="text-3xl md:text-4xl font-serif mb-8 text-amber-800">Attendance</h2>
+
               <form onSubmit={(e) => {
                 e.preventDefault();
-                // Handle submit logic here
                 setIsSubmitting(true);
                 fetch(`/api/guests/${guest.id}`, {
                   method: 'PATCH',
@@ -741,36 +719,38 @@ function HomeContent() {
                 }).then(() => {
                   setSubmitSuccess(true);
                   setIsSubmitting(false);
-                  setTimeout(() => setSubmitSuccess(false), 3000);
                 });
-              }} className="space-y-6 bg-white p-8 rounded-3xl shadow-xl">
-                <div className="flex gap-4 justify-center">
+              }} className="space-y-4 md:space-y-6 bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-amber-100">
+
+                <div className="flex flex-col md:flex-row gap-3 md:gap-4">
                   <button type="button" onClick={() => setRsvpStatus('present')}
-                    className={`flex-1 py-3 rounded-xl font-medium transition-all ${rsvpStatus === 'present' ? 'bg-amber-500 text-white shadow-lg scale-105' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                    Hadir
+                    className={`py-3 md:py-4 px-6 rounded-xl font-medium transition-all text-sm md:text-base ${rsvpStatus === 'present' ? 'bg-amber-500 text-white shadow-lg' : 'bg-gray-50 text-gray-400'}`}>
+                    Saya Hadir
                   </button>
                   <button type="button" onClick={() => setRsvpStatus('absent')}
-                    className={`flex-1 py-3 rounded-xl font-medium transition-all ${rsvpStatus === 'absent' ? 'bg-gray-700 text-white shadow-lg scale-105' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                    Maaf
+                    className={`py-3 md:py-4 px-6 rounded-xl font-medium transition-all text-sm md:text-base ${rsvpStatus === 'absent' ? 'bg-gray-700 text-white shadow-lg' : 'bg-gray-50 text-gray-400'}`}>
+                    Maaf, Tidak Bisa
                   </button>
                 </div>
+
                 <textarea
                   value={wishes}
                   onChange={e => setWishes(e.target.value)}
-                  placeholder="Tulis ucapan & doa..."
-                  className="w-full p-4 bg-amber-50 rounded-xl border-0 focus:ring-2 focus:ring-amber-300 resize-none h-32"
+                  placeholder="Ucapan & doa restu..."
+                  className="w-full p-4 bg-amber-50/50 rounded-xl border border-amber-100 focus:ring-2 focus:ring-amber-200 resize-none h-32 md:h-40 text-sm md:text-base"
                 />
-                <button disabled={isSubmitting} className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:bg-amber-700 transition-all">
-                  {isSubmitting ? <Loader2 className="animate-spin mx-auto" /> : submitSuccess ? "Terkirim!" : "Kirim Konfirmasi"}
+
+                <button disabled={isSubmitting} className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-70 disabled:scale-100">
+                  {isSubmitting ? <Loader2 className="animate-spin mx-auto" /> : submitSuccess ? "Terkirim! Terima Kasih" : "Kirim Konfirmasi"}
                 </button>
               </form>
             </div>
           </section>
         )}
 
-        <footer className="py-12 bg-[#1a1a2e] text-amber-100 text-center">
-          <h2 className="font-script text-4xl mb-4">Dimas & Davina</h2>
-          <p className="opacity-50 text-sm">Created with Love • 2026</p>
+        <footer className="py-12 bg-[#1a1a2e] text-amber-100 text-center px-4">
+          <h2 className="font-script text-3xl md:text-4xl mb-4">Dimas & Davina</h2>
+          <p className="opacity-50 text-xs md:text-sm">Created with Love • 2026</p>
         </footer>
       </div>
     </>
@@ -779,7 +759,7 @@ function HomeContent() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div className="h-screen grid place-items-center"><Loader2 className="animate-spin" /></div>}>
+    <Suspense fallback={<div className="h-screen bg-[#fdfbf7] md:bg-white" />}>
       <HomeContent />
     </Suspense>
   );
