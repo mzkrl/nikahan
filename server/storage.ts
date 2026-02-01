@@ -1,38 +1,43 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import { guests, type Guest, type InsertGuest } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getGuests(): Promise<Guest[]>;
+  getGuest(id: number): Promise<Guest | undefined>;
+  getGuestBySlug(slug: string): Promise<Guest | undefined>;
+  createGuest(guest: InsertGuest): Promise<Guest>;
+  updateGuest(id: number, updates: Partial<Guest>): Promise<Guest>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getGuests(): Promise<Guest[]> {
+    return await db.select().from(guests);
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getGuest(id: number): Promise<Guest | undefined> {
+    const [guest] = await db.select().from(guests).where(eq(guests.id, id));
+    return guest;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getGuestBySlug(slug: string): Promise<Guest | undefined> {
+    const [guest] = await db.select().from(guests).where(eq(guests.slug, slug));
+    return guest;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async createGuest(insertGuest: InsertGuest): Promise<Guest> {
+    const [guest] = await db.insert(guests).values(insertGuest).returning();
+    return guest;
+  }
+
+  async updateGuest(id: number, updates: Partial<Guest>): Promise<Guest> {
+    const [updated] = await db
+      .update(guests)
+      .set(updates)
+      .where(eq(guests.id, id))
+      .returning();
+    return updated;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
