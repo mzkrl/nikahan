@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Heart, Calendar, Clock, MapPin, Volume2, VolumeX, Loader2 } from "lucide-react";
 
@@ -18,7 +18,7 @@ const PLAYLIST = [
   "/music/Christina Perri - A Thousand Years.webm"
 ];
 
-export default function HomePage() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const guestSlug = searchParams.get("guest");
 
@@ -32,7 +32,6 @@ export default function HomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Fetch guest data
   useEffect(() => {
     if (guestSlug) {
       setIsLoading(true);
@@ -50,7 +49,6 @@ export default function HomePage() {
     }
   }, [guestSlug]);
 
-  // Random song on mount
   useEffect(() => {
     setCurrentSongIndex(Math.floor(Math.random() * PLAYLIST.length));
   }, []);
@@ -112,7 +110,6 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Welcome Overlay */}
       {showWelcome && guest && (
         <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center">
           <div className="text-center text-white space-y-8 p-8">
@@ -131,10 +128,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Background Music */}
       <audio ref={audioRef} src={PLAYLIST[currentSongIndex]} onEnded={handleSongEnd} />
 
-      {/* Music Toggle */}
       <button
         onClick={toggleMusic}
         className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-lg transition-all"
@@ -143,7 +138,6 @@ export default function HomePage() {
       </button>
 
       <main className="bg-background text-foreground">
-        {/* Hero Section */}
         <section className="relative h-screen w-full flex flex-col items-center justify-center text-center px-4">
           <div className="absolute inset-0 z-0">
             <div className="absolute inset-0 bg-black/40 z-10" />
@@ -171,7 +165,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Quote Section */}
         <section className="py-24 bg-amber-700 text-white text-center px-4">
           <div className="max-w-3xl mx-auto space-y-6">
             <Heart className="w-12 h-12 mx-auto fill-current opacity-80" />
@@ -182,7 +175,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Event Details */}
         <section className="py-24 px-4 max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-amber-700 font-bold tracking-widest uppercase mb-2">The Details</p>
@@ -235,7 +227,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* RSVP Section */}
         {guest && (
           <section className="py-24 px-4 bg-amber-50">
             <div className="max-w-xl mx-auto text-center space-y-8">
@@ -286,7 +277,6 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Footer */}
         <footer className="bg-amber-700 text-white py-12 text-center">
           <h2 className="font-script text-4xl mb-4">Dimas & Davina</h2>
           <p className="text-sm opacity-80 mb-8">02 . 02 . 2025</p>
@@ -296,5 +286,17 @@ export default function HomePage() {
         </footer>
       </main>
     </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="w-12 h-12 text-amber-700 animate-spin" />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
