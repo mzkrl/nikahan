@@ -63,9 +63,15 @@ export async function POST(
         }
 
         // Build the full invite URL
-        const baseUrl = process.env.PUBLIC_SITE_URL || process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : "http://localhost:3000";
+        let baseUrl = process.env.PUBLIC_SITE_URL;
+
+        if (!baseUrl) {
+            baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
+        }
+
+        // Remove trailing slash if present
+        baseUrl = baseUrl.replace(/\/$/, "");
+
         const inviteUrl = `${baseUrl}/?guest=${guest.slug}`;
 
         // Generate shortlink
