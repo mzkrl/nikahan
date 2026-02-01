@@ -37,18 +37,17 @@ async function createShortlink(url: string, preferredSlug?: string): Promise<str
             }
 
             const data = await response.json();
-            console.log("ze4.me response:", JSON.stringify(data));
 
-            // Prioritize specific fields based on user feedback
-            if (data.url && typeof data.url === 'string') return data.url;
-            if (data.shortUrl && typeof data.shortUrl === 'string') return data.shortUrl;
-            if (data.link && typeof data.link === 'string') return data.link;
+            // Debug log
+            // console.log("ze4.me response:", JSON.stringify(data));
 
-            // Fallback for nested data structure
-            if (data.data && data.data.link) return data.data.link;
+            // Correct extraction based on user log
+            // Response structure: { link: { slug: "..." }, ... }
+            if (data.link && data.link.slug) {
+                return `https://ze4.me/${data.link.slug}`;
+            }
 
-            console.warn("Could not extract URL from ze4.me response, returning full data for debug but defaulting to null in logic");
-            // If we really can't find it, don't return the whole JSON object stringified inadvertently
+            console.warn("Could not extract slug from ze4.me response", data);
             return null;
         } catch (error) {
             console.error("Shortlink fetch error:", error);
@@ -61,11 +60,16 @@ async function createShortlink(url: string, preferredSlug?: string): Promise<str
         // Cleaning slug to be URL safe just in case
         const cleanSlug = preferredSlug.replace(/[^a-zA-Z0-9-_]/g, "-");
         const result = await callApi({ url, slug: cleanSlug });
+
+        // CRITICAL: Only proceed to fallback if result is null
+        // If result is valid, return it immediately to avoid creating double links
         if (result) return result;
+
+        console.log(`Custom slug '${cleanSlug}' failed or invalid, trying random...`);
     }
 
-    // 2. Fallback to random slug if custom slug failed (likely duplicate) or no slug provided
-    console.log("Fallback to random slug shortlink...");
+    // 2. Fallback to random slug if custom slug failed
+    console.log("Generating random slug shortlink...");
     const result = await callApi({ url });
     return result || url;
 }
