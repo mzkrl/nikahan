@@ -88,9 +88,9 @@ export default function Home() {
       <Section className="bg-secondary/30">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="order-2 md:order-1 text-center md:text-right space-y-6">
-            <h2 className="text-5xl md:text-6xl font-script text-primary">Rizky Dawam N</h2>
+            <h2 className="text-5xl md:text-6xl font-script text-primary">Dimas Saktiawan</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              The son of Mr. Ahmad & Mrs. Siti. <br/>
+              The son of Mr. Alan & Mrs. Alfatiha. <br/>
               A man of few words but endless love. A dedicated developer and a loving partner who found his perfect match in the code of life.
             </p>
             <div className="flex justify-center md:justify-end gap-4 text-primary">
@@ -127,7 +127,7 @@ export default function Home() {
           <div className="text-center md:text-left space-y-6">
             <h2 className="text-5xl md:text-6xl font-script text-primary">Davina Anandia</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              The daughter of Mr. Budi & Mrs. Rina. <br/>
+              The daughter of Mr. Zufar & Mrs. Intan. <br/>
               A radiant soul with a heart of gold. She brings light, laughter, and warmth to everyone she meets.
             </p>
             <div className="flex justify-center md:justify-start gap-4 text-primary">
@@ -224,7 +224,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold font-serif mb-1">Holy Matrimony</h3>
-                  <p className="text-muted-foreground mb-2">Saturday, 25 October 2025</p>
+                  <p className="text-muted-foreground mb-2">Monday, 02 February of 2026</p>
                   <p className="font-medium text-foreground">08:00 AM - 10:00 AM</p>
                 </div>
               </div>
@@ -235,7 +235,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold font-serif mb-1">Wedding Reception</h3>
-                  <p className="text-muted-foreground mb-2">Saturday, 25 October 2025</p>
+                  <p className="text-muted-foreground mb-2">Monday, 02 February of 2026</p>
                   <p className="font-medium text-foreground">11:00 AM - 01:00 PM</p>
                 </div>
               </div>
