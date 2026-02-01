@@ -257,7 +257,7 @@ export default function Home() {
             {/* Story Item 1 */}
             <div className="relative grid md:grid-cols-2 gap-8 mb-12 items-center">
               <div className="md:text-right p-6 bg-white rounded-xl shadow-sm border border-border/50 hover:shadow-md transition-shadow">
-                <span className="text-primary font-bold text-lg block mb-2">2018</span>
+                <span className="text-primary font-bold text-lg block mb-2">2023</span>
                 <h3 className="text-xl font-serif font-bold mb-2">High School Days</h3>
                 <p className="text-muted-foreground">
                   We were classmates in vocational school. Just friends sharing notes and dreams, unaware of what the future held.
@@ -276,10 +276,10 @@ export default function Home() {
                 <div className="w-4 h-4 bg-primary rounded-full ring-4 ring-primary/20"></div>
               </div>
               <div className="p-6 bg-white rounded-xl shadow-sm border border-border/50 hover:shadow-md transition-shadow">
-                <span className="text-primary font-bold text-lg block mb-2">2022</span>
+                <span className="text-primary font-bold text-lg block mb-2">2025</span>
                 <h3 className="text-xl font-serif font-bold mb-2">Reconnected</h3>
                 <p className="text-muted-foreground">
-                  After years apart, a simple reply to an Instagram story sparked a conversation that never ended.
+                  After a semester apart, a simple reply to an Instagram story sparked a conversation that never ended.
                 </p>
               </div>
             </div>
@@ -287,7 +287,7 @@ export default function Home() {
             {/* Story Item 3 */}
             <div className="relative grid md:grid-cols-2 gap-8 items-center">
               <div className="md:text-right p-6 bg-white rounded-xl shadow-sm border border-border/50 hover:shadow-md transition-shadow">
-                <span className="text-primary font-bold text-lg block mb-2">2024</span>
+                <span className="text-primary font-bold text-lg block mb-2">2026</span>
                 <h3 className="text-xl font-serif font-bold mb-2">The Proposal</h3>
                 <p className="text-muted-foreground">
                   Under the stars in Jakarta, he asked the question, and she said "Yes" to a lifetime together.
