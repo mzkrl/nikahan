@@ -37,12 +37,19 @@ async function createShortlink(url: string, preferredSlug?: string): Promise<str
             }
 
             const data = await response.json();
-            // Assuming ze4.me returns { shortUrl: "..." } or similar. 
-            // Based on standard APIs, let's look for the url field.
-            // If the user didn't specify the response format, I will log it for debugging if it fails.
-            // But let's assume standard structure or return the full object to inspect if needed.
-            // Common patterns: data.shortUrl, data.link, data.url
-            return data.shortUrl || data.link || data.url || (data.data && data.data.link);
+            console.log("ze4.me response:", JSON.stringify(data));
+
+            // Prioritize specific fields based on user feedback
+            if (data.url && typeof data.url === 'string') return data.url;
+            if (data.shortUrl && typeof data.shortUrl === 'string') return data.shortUrl;
+            if (data.link && typeof data.link === 'string') return data.link;
+
+            // Fallback for nested data structure
+            if (data.data && data.data.link) return data.data.link;
+
+            console.warn("Could not extract URL from ze4.me response, returning full data for debug but defaulting to null in logic");
+            // If we really can't find it, don't return the whole JSON object stringified inadvertently
+            return null;
         } catch (error) {
             console.error("Shortlink fetch error:", error);
             return null;

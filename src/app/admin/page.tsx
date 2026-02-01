@@ -348,8 +348,8 @@ export default function AdminPage() {
                                 key={status}
                                 onClick={() => setFilterStatus(status)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterStatus === status
-                                        ? "bg-amber-700 text-white"
-                                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                    ? "bg-amber-700 text-white"
+                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                                     }`}
                             >
                                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -383,10 +383,10 @@ export default function AdminPage() {
                                     <div>
                                         <span
                                             className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${guest.attendanceStatus === "present"
-                                                    ? "bg-green-100 text-green-700"
-                                                    : guest.attendanceStatus === "absent"
-                                                        ? "bg-red-100 text-red-700"
-                                                        : "bg-gray-100 text-gray-600"
+                                                ? "bg-green-100 text-green-700"
+                                                : guest.attendanceStatus === "absent"
+                                                    ? "bg-red-100 text-red-700"
+                                                    : "bg-gray-100 text-gray-600"
                                                 }`}
                                         >
                                             {guest.attendanceStatus === "present" ? "Attending" :
@@ -411,7 +411,7 @@ export default function AdminPage() {
                                             <LinkIcon className="w-4 h-4" />
                                         </button>
 
-                                        {guest.shortlink ? (
+                                        {guest.shortlink && !guest.shortlink.startsWith("{") ? (
                                             <button
                                                 onClick={() => copyToClipboard(guest.shortlink!, "Shortlink")}
                                                 className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
@@ -424,7 +424,7 @@ export default function AdminPage() {
                                                 onClick={() => generateShortlink(guest.id)}
                                                 disabled={generatingShortlink === guest.id}
                                                 className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50"
-                                                title="Generate shortlink"
+                                                title={guest.shortlink && guest.shortlink.startsWith("{") ? "Regenerate (Fixed invalid link)" : "Generate shortlink"}
                                             >
                                                 {generatingShortlink === guest.id ? (
                                                     <Loader2 className="w-4 h-4 animate-spin" />
