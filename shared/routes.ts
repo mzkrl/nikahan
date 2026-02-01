@@ -9,6 +9,9 @@ export const errorSchemas = {
   notFound: z.object({
     message: z.string(),
   }),
+  unauthorized: z.object({
+    message: z.string(),
+  }),
   internal: z.object({
     message: z.string(),
   }),
@@ -44,6 +47,31 @@ export const api = {
       },
     },
   },
+  admin: {
+    login: {
+      method: 'POST' as const,
+      path: '/api/admin/login',
+      input: z.object({ password: z.string() }),
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    stats: {
+      method: 'GET' as const,
+      path: '/api/admin/stats',
+      responses: {
+        200: z.object({
+          total: z.number(),
+          present: z.number(),
+          absent: z.number(),
+          pending: z.number(),
+          guests: z.array(z.custom<typeof guests.$inferSelect>()),
+        }),
+        401: errorSchemas.unauthorized,
+      },
+    },
+  }
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {
