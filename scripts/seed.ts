@@ -74,7 +74,9 @@ const guestListNames = [
     "RIZKY DAWAM NURRAHMAN",
     "RIZKY FADHLURRAHMAN RAMADHAN",
     "SULTAN HARUNSYAH PUTERA ANDJALI",
-    "ZUFAR RAFID IRAWAN"
+    "ZUFAR RAFID IRAWAN",
+    "FARAH WANODYATMA",
+    "WASTONI"
 ];
 
 async function seed() {
