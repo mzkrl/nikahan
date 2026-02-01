@@ -6,7 +6,7 @@ import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
-// Schema definition
+// Schema definition (harus match dengan db.ts)
 const guests = pgTable("guests", {
     id: serial("id").primaryKey(),
     name: text("name").notNull(),
@@ -28,18 +28,53 @@ function generateSlug(name: string): string {
         .trim();
 }
 
-// Sample guests data
-const sampleGuests = [
-    { name: "John Doe", phone: "081234567890" },
-    { name: "Jane Smith", phone: "081234567891" },
-    { name: "Ahmad Rizky", phone: "081234567892" },
-    { name: "Siti Nurhaliza", phone: "081234567893" },
-    { name: "Budi Santoso", phone: "081234567894" },
-    { name: "Dewi Lestari", phone: "081234567895" },
-    { name: "Eko Prasetyo", phone: "081234567896" },
-    { name: "Fitri Handayani", phone: "081234567897" },
-    { name: "Galih Pratama", phone: "081234567898" },
-    { name: "Hana Wijaya", phone: "081234567899" },
+// Helper to convert Title Case
+function toTitleCase(str: string) {
+    return str.replace(
+        /\w\S*/g,
+        text => text.charAt(0).toUpperCase() + text.substring(1).toLowerCase()
+    );
+}
+
+// REAL GUEST LIST
+const guestListNames = [
+    "AFDA ANDIKA KAYDE RUKAWA",
+    "AHMAD AIDUL QAMIL",
+    "AHMAD FAUZAN",
+    "ALAN SUROTO AMARTYA",
+    "ALFAREDZI DINOVA",
+    "ALFATIHA GALUH",
+    "ANGGATRA SATYA PUTRA NUGROHO",
+    "ANSELMUS KARTONO BANGGUR",
+    "APRILIA INTANI",
+    "DAVINA ANANDIA",
+    "DELVINO BERNARDO ABELARD PASARIBU",
+    "DENENDRA RAHADYAN DANARDI",
+    "DIMAS SAKTIAWAN",
+    "ENRIQOE VAZQUEZ",
+    "ERGA PIERO",
+    "EVI VANI RONA ULI SIRAIT",
+    "FAREL AGUSTINUS SILALAHI",
+    "GIANDRA VALENTINO SUAJI ERWANTO",
+    "GRACE MARIN SITANGGANG",
+    "HAIKAL IDRIS",
+    "HIKAM ZIDAN RAMADHAN",
+    "HOSHI UKASYAH ALUWIH",
+    "IRSYAD RAMADHAN ABIDIN",
+    "JUANG DANOVADIL FAOMASI ZEBUA",
+    "MIKAEL FEBRIAN",
+    "MUFID PERDANA",
+    "MUHAMMAD DWIMI HANIF AL GHIFARI",
+    "MUHAMMAD GILANG ARRASYID",
+    "MUHAMMAD RAFFI FARDAN AL AFFAN",
+    "MUHAMMAD ROMAN KHAIRUL AZZAM",
+    "RAUF WILDAN SANJAYA",
+    "RAY ALLAND MOURICE LUMOPA",
+    "RIZKI ABDILLAH BAHRI",
+    "RIZKY DAWAM NURRAHMAN",
+    "RIZKY FADHLURRAHMAN RAMADHAN",
+    "SULTAN HARUNSYAH PUTERA ANDJALI",
+    "ZUFAR RAFID IRAWAN"
 ];
 
 async function seed() {
@@ -56,76 +91,50 @@ async function seed() {
 
     const pool = new Pool({
         connectionString,
-        ssl: { rejectUnauthorized: false },
+        ssl: { rejectUnauthorized: false }, // Penting untuk Neon DB
     });
 
     const db = drizzle(pool);
 
     try {
-        // Create table if not exists
-        console.log("📦 Creating guests table if not exists...");
+        console.log("🧹 Clearing existing guests (TRUNCATE)...");
+        // Hapus data lama agar bersih dan sesuai list baru
+        await pool.query("TRUNCATE TABLE guests RESTART IDENTITY CASCADE");
+
+        // Periksa/Buat tabel jika belum ada (opsional, tapi bagus untuk safety)
+        console.log("📦 Checking guests table...");
         await pool.query(`
-      CREATE TABLE IF NOT EXISTS guests (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        slug TEXT NOT NULL UNIQUE,
-        shortlink TEXT,
-        phone TEXT,
-        attendance_status TEXT DEFAULT 'pending',
-        wishes TEXT,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+            CREATE TABLE IF NOT EXISTS guests (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                slug TEXT NOT NULL UNIQUE,
+                shortlink TEXT,
+                phone TEXT,
+                attendance_status TEXT DEFAULT 'pending',
+                wishes TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
 
-        // Check if table already has data
-        const existingGuests = await db.select().from(guests);
+        console.log(`🌱 Seeding ${guestListNames.length} guests...\n`);
 
-        if (existingGuests.length > 0) {
-            console.log(`ℹ️  Table already has ${existingGuests.length} guests.`);
-            console.log("Do you want to add more sample data? (existing data will be preserved)");
-
-            // In non-interactive mode, skip adding more data
-            if (process.argv.includes("--force")) {
-                console.log("🔄 --force flag detected, adding sample guests...");
-            } else {
-                console.log("Run with --force to add sample guests anyway.");
-                console.log("\n📋 Existing guests:");
-                existingGuests.forEach((g, i) => {
-                    console.log(`   ${i + 1}. ${g.name} (${g.slug}) - ${g.attendanceStatus}`);
-                });
-                await pool.end();
-                return;
-            }
-        }
-
-        // Insert sample guests
-        console.log("🌱 Seeding sample guests...\n");
-
-        for (const guest of sampleGuests) {
-            const slug = generateSlug(guest.name);
+        for (const rawName of guestListNames) {
+            const name = toTitleCase(rawName); // Ubah jadi Title Case biar cantik
+            const slug = generateSlug(name);
 
             try {
                 await db.insert(guests).values({
-                    name: guest.name,
+                    name,
                     slug,
-                    phone: guest.phone,
                     attendanceStatus: "pending",
                 });
-                console.log(`   ✅ Added: ${guest.name} → /?guest=${slug}`);
+                console.log(`   ✅ Added: ${name.padEnd(30)} → /?guest=${slug}`);
             } catch (error: any) {
-                if (error.code === "23505") {
-                    console.log(`   ⚠️  Skipped (already exists): ${guest.name}`);
-                } else {
-                    throw error;
-                }
+                console.error(`   ❌ Failed to add ${name}:`, error.message);
             }
         }
 
-        console.log("\n✨ Seeding completed!");
-        console.log("\n📋 Sample invite URLs:");
-        console.log("   http://localhost:3000/?guest=john-doe");
-        console.log("   http://localhost:3000/?guest=jane-smith");
-        console.log("   http://localhost:3000/?guest=ahmad-rizky");
+        console.log("\n✨ Seeding completed successfully!");
 
     } catch (error) {
         console.error("❌ Error seeding database:", error);
