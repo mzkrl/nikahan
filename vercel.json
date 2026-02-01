@@ -1,12 +1,11 @@
 {
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist/public",
+    "framework": "vite",
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "/api/index.js"
-        },
-        {
-            "source": "/((?!api/|assets/|music/|favicon.ico|manifest.json|.*\\..*).*)",
-            "destination": "/index.html"
+            "destination": "/api"
         }
     ]
 }
