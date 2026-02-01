@@ -230,10 +230,8 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Guest not found" });
       }
 
-      // Get the app URL - use request host for Vercel compatibility
-      const protocol = req.headers['x-forwarded-proto'] || 'https';
-      const host = req.headers['x-forwarded-host'] || req.headers.host;
-      const appUrl = `${protocol}://${host}`;
+      // Get the app URL - use env var for production/Vercel, fallback to request logic
+      const appUrl = process.env.PUBLIC_SITE_URL || `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers['x-forwarded-host'] || req.headers.host}`;
 
       try {
         await axios.post(SHORTLINK_API, {
