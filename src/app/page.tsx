@@ -361,6 +361,74 @@ function WelcomeOverlay({ guest, onComplete, onPlayMusic }: { guest: Guest; onCo
   );
 }
 
+// ==================== WISHES SECTION ====================
+function WishesSection() {
+  const [wishes, setWishes] = useState<{ name: string, wishes: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/wishes")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setWishes(data);
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (!loading && wishes.length === 0) return null;
+
+  return (
+    <AnimatedSection className="bg-[#fcfaf7]">
+      <div className="text-center mb-10 md:mb-16">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100/50 text-amber-700 rounded-full text-xs font-semibold tracking-wider uppercase mb-4">
+          <Star className="w-3 h-3" /> Prayers & Wishes
+        </div>
+        <h2 className="text-3xl md:text-5xl font-script text-gray-800 mb-4">Doa & Ucapan</h2>
+        <p className="text-gray-500 font-light max-w-lg mx-auto">
+          Terima kasih atas segala doa dan harapan tulus yang telah Anda berikan untuk perjalanan baru kami.
+        </p>
+      </div>
+
+      <div className="max-w-4xl mx-auto relative">
+        <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-amber-200 scrollbar-track-transparent">
+          {(loading ? [...Array(3)] : wishes).map((wish, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "50px" }}
+              className="bg-white p-6 rounded-2xl shadow-sm border border-amber-50 group hover:shadow-md transition-all"
+            >
+              {loading ? (
+                <div className="animate-pulse flex gap-4">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                    <div className="h-3 bg-gray-100 rounded w-full"></div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-4 items-start">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-amber-700 font-bold text-sm shrink-0 shadow-inner">
+                    {wish.name ? wish.name.charAt(0) : "?"}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-800 text-sm md:text-base mb-1">{wish.name}</h4>
+                    <p className="text-gray-600 text-sm italic leading-relaxed font-serif">"{wish.wishes}"</p>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+        {/* Helper gradient for scroll hint */}
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#fcfaf7] to-transparent pointer-events-none"></div>
+      </div>
+    </AnimatedSection>
+  )
+}
+
 // ==================== HOME CONTENT ====================
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -756,6 +824,7 @@ function HomeContent() {
                 }).then(() => {
                   setSubmitSuccess(true);
                   setIsSubmitting(false);
+                  // Refresh wishes list if we had a query client, or just let users see it next time
                 });
               }} className="space-y-4 md:space-y-6 bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-amber-100">
 
@@ -784,6 +853,9 @@ function HomeContent() {
             </div>
           </section>
         )}
+
+        {/* WISHES & PRAYERS SECTION */}
+        <WishesSection />
 
         <footer className="py-12 bg-[#1a1a2e] text-amber-100 text-center px-4">
           <h2 className="font-script text-3xl md:text-4xl mb-4">Dimas & Davina</h2>
