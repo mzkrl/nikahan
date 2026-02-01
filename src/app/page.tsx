@@ -3,14 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, useScroll, useTransform, useInView, useSpring, useMotionValue } from "framer-motion";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Heart, Calendar, Clock, MapPin, Volume2, VolumeX, Loader2, Camera, Music, Sparkles, Star, Quote } from "lucide-react";
-
-// Register GSAP plugins
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
 
 interface Guest {
   id: number;
@@ -161,24 +154,24 @@ function SparkleEffect() {
   );
 }
 
-// ==================== 3D TILT CARD (DISABLED ON MOBILE) ====================
+// ==================== 3D TILT CARD (SAFE MOBILE) ====================
 function TiltCard({ children }: { children: React.ReactNode }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const mouseX = useSpring(x);
-  const mouseY = useSpring(y);
-  const [isMobile, setIsMobile] = useState(false);
+  const mouseX = useSpring(x, { stiffness: 500, damping: 50 }); // Add spring config
+  const mouseY = useSpring(y, { stiffness: 500, damping: 50 });
+  const [isMobile, setIsMobile] = useState(true); // Default strictly safe
 
   useEffect(() => {
+    // Only enable tilt on desktop after mount to prevent hydration mismatch
     const checkMobile = () => setIsMobile(window.matchMedia("(max-width: 768px)").matches);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  if (isMobile) return <div className="w-full">{children}</div>;
-
   function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
+    if (isMobile) return;
     const { left, top, width, height } = currentTarget.getBoundingClientRect();
     const xPct = (clientX - left) / width - 0.5;
     const yPct = (clientY - top) / height - 0.5;
@@ -187,16 +180,26 @@ function TiltCard({ children }: { children: React.ReactNode }) {
   }
 
   function handleMouseLeave() {
+    if (isMobile) return;
     x.set(0);
     y.set(0);
   }
+
+  // Always render motion.div to maintain consistency, just disable rotation effect on mobile
+  // Rotate values will be 0 if isMobile (since x/y not updated), plus we short-circuit transform
+  const rotateX = useTransform(mouseY, [-0.5, 0.5], [10, -10]);
+  const rotateY = useTransform(mouseX, [-0.5, 0.5], [-10, 10]);
 
   return (
     <motion.div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ rotateX: useTransform(mouseY, [-0.5, 0.5], [10, -10]), rotateY: useTransform(mouseX, [-0.5, 0.5], [-10, 10]), transformStyle: "preserve-3d" }}
-      className="perspective-1000 w-full flex justify-center"
+      style={{
+        rotateX: isMobile ? 0 : rotateX,
+        rotateY: isMobile ? 0 : rotateY,
+        transformStyle: "preserve-3d"
+      }}
+      className="perspective-1000 w-full flex justify-center will-change-transform" // optimize hint
     >
       {children}
     </motion.div>

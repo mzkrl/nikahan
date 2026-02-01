@@ -28,7 +28,7 @@ export default function RootLayout({
         />
         <link rel="icon" href="/favicon.png" type="image/png" />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         {children}
       </body>
     </html>
