@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, useScroll, useTransform, useInView, useSpring, useMotionValue } from "framer-motion";
-import { Heart, Calendar, Clock, MapPin, Volume2, VolumeX, Loader2, Camera, Music, Sparkles, Star, Quote } from "lucide-react";
+import { Heart, Calendar, Clock, MapPin, Volume2, VolumeX, Loader2, Camera, Music, Sparkles, Star, Quote, Github, Instagram } from "lucide-react";
 
 interface Guest {
   id: number;
@@ -858,7 +858,30 @@ function HomeContent() {
         <footer className="py-12 bg-[#1a1a2e] text-amber-100 text-center px-4">
           <h2 className="font-script text-3xl md:text-4xl mb-4">Dimas & Davina</h2>
           <p className="opacity-50 text-xs md:text-sm">Created with Love • 2026</p>
-          <p className="opacity-50 text-xs md:text-sm mt-4"><a href="https://github.com/ujangPNG">Made by ujangPNG</a></p>
+
+          <div className="flex justify-center items-center gap-6 mt-8">
+            <a
+              href="https://github.com/ujangPNG"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-all hover:text-white group"
+            >
+              <Github className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+              <span className="text-sm tracking-wide">Made by ujangPNG</span>
+            </a>
+
+            <div className="w-px h-4 bg-white/20"></div>
+
+            <a
+              href="https://www.instagram.com/eunoikos._/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-all hover:text-pink-400 group"
+            >
+              <Instagram className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+              <span className="text-sm tracking-wide">Know more about us!</span>
+            </a>
+          </div>
         </footer>
       </div>
     </>
