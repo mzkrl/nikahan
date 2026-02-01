@@ -23,6 +23,7 @@ export default function Admin() {
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
   const [editPhone, setEditPhone] = useState("");
   const [selectedQrGuest, setSelectedQrGuest] = useState<Guest | null>(null);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -31,9 +32,22 @@ export default function Admin() {
     queryKey: [api.admin.checkAuth.path],
     queryFn: async () => {
       const res = await fetch(api.admin.checkAuth.path, { credentials: "include" });
-      return res.json() as Promise<{ authenticated: boolean }>;
+      const data = await res.json() as { authenticated: boolean; csrfToken?: string };
+      if (data.csrfToken) {
+        setCsrfToken(data.csrfToken);
+      }
+      return data;
     },
   });
+
+  // Helper to get headers with CSRF token
+  const getHeaders = () => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
+    return headers;
+  };
 
   // Get stats/guests
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -59,9 +73,12 @@ export default function Admin() {
         const data = await res.json();
         throw new Error(data.message || "Login failed");
       }
-      return res.json();
+      return res.json() as Promise<{ success: boolean; csrfToken: string }>;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data.csrfToken) {
+        setCsrfToken(data.csrfToken);
+      }
       queryClient.invalidateQueries({ queryKey: [api.admin.checkAuth.path] });
       queryClient.invalidateQueries({ queryKey: [api.admin.stats.path] });
       toast({ title: "Login successful", description: "Welcome to the admin panel!" });
@@ -76,11 +93,13 @@ export default function Admin() {
     mutationFn: async () => {
       const res = await fetch(api.admin.logout.path, {
         method: "POST",
+        headers: getHeaders(),
         credentials: "include",
       });
       return res.json();
     },
     onSuccess: () => {
+      setCsrfToken(null);
       queryClient.invalidateQueries({ queryKey: [api.admin.checkAuth.path] });
       queryClient.invalidateQueries({ queryKey: [api.admin.stats.path] });
     },
@@ -91,7 +110,7 @@ export default function Admin() {
     mutationFn: async ({ name, phone }: { name: string; phone?: string }) => {
       const res = await fetch(api.admin.createGuest.path, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ name, phone }),
         credentials: "include",
       });
@@ -117,7 +136,7 @@ export default function Admin() {
     mutationFn: async ({ id, phone }: { id: number; phone: string }) => {
       const res = await fetch(buildUrl(api.admin.updateGuest.path, { id }), {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ phone }),
         credentials: "include",
       });
@@ -142,6 +161,7 @@ export default function Admin() {
     mutationFn: async (id: number) => {
       const res = await fetch(buildUrl(api.admin.deleteGuest.path, { id }), {
         method: "DELETE",
+        headers: getHeaders(),
         credentials: "include",
       });
       if (!res.ok) {
@@ -164,6 +184,7 @@ export default function Admin() {
     mutationFn: async (id: number) => {
       const res = await fetch(buildUrl(api.admin.createShortlink.path, { id }), {
         method: "POST",
+        headers: getHeaders(),
         credentials: "include",
       });
       if (!res.ok) {

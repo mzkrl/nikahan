@@ -3,9 +3,10 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import crypto from "crypto";
 
 const API_KEY = "nCSthEqZ1hMo8ivkjF2ugQWUsgW0YDuTdIcz9UgFkGE";
 const SHORTLINK_API = "https://ze4.me/api/shortlinks";
@@ -14,7 +15,30 @@ const SHORTLINK_API = "https://ze4.me/api/shortlinks";
 declare module "express-session" {
   interface SessionData {
     isAdmin: boolean;
+    csrfToken: string;
   }
+}
+
+// Generate CSRF token
+function generateCsrfToken(): string {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+// CSRF validation middleware for admin routes
+function validateCsrf(req: Request, res: Response, next: NextFunction) {
+  // Skip CSRF validation for login (initial session creation) and GET requests
+  if (req.method === "GET" || req.path === api.admin.login.path) {
+    return next();
+  }
+  
+  const headerToken = req.headers["x-csrf-token"];
+  const sessionToken = req.session?.csrfToken;
+  
+  if (!headerToken || !sessionToken || headerToken !== sessionToken) {
+    return res.status(403).json({ message: "Invalid CSRF token" });
+  }
+  
+  return next();
 }
 
 // Admin authentication middleware
@@ -33,12 +57,13 @@ export async function registerRoutes(
   const MemStore = MemoryStore(session);
   app.use(
     session({
-      secret: process.env.ADMIN || "default-secret-change-me",
+      secret: process.env.SESSION_SECRET || "default-session-secret-change-in-production",
       resave: false,
       saveUninitialized: false,
       cookie: {
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
+        sameSite: "strict", // CSRF protection
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
       },
       store: new MemStore({
@@ -79,7 +104,9 @@ export async function registerRoutes(
     }
   });
 
-  // Admin Routes
+  // Admin Routes - Apply CSRF validation
+  app.use("/api/admin", validateCsrf);
+  
   app.post(api.admin.login.path, (req, res) => {
     try {
       const { password } = api.admin.login.input.parse(req.body);
@@ -91,7 +118,9 @@ export async function registerRoutes(
 
       if (password === adminPassword) {
         req.session.isAdmin = true;
-        return res.json({ success: true });
+        // Generate CSRF token on successful login
+        req.session.csrfToken = generateCsrfToken();
+        return res.json({ success: true, csrfToken: req.session.csrfToken });
       }
 
       return res.status(401).json({ message: "Invalid password" });
@@ -110,7 +139,10 @@ export async function registerRoutes(
   });
 
   app.get(api.admin.checkAuth.path, (req, res) => {
-    res.json({ authenticated: !!req.session?.isAdmin });
+    res.json({ 
+      authenticated: !!req.session?.isAdmin,
+      csrfToken: req.session?.csrfToken
+    });
   });
 
   app.get(api.admin.stats.path, requireAdmin, async (req, res) => {
@@ -216,16 +248,17 @@ export async function registerRoutes(
         await storage.updateGuest(id, { shortlink });
         
         res.json({ shortlink });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const axiosError = error as AxiosError;
         // If shortlink already exists (409 conflict), just use the existing one
-        if (error?.response?.status === 409) {
+        if (axiosError?.response?.status === 409) {
           const shortlink = `https://ze4.me/${guest.slug}`;
           await storage.updateGuest(id, { shortlink });
           res.json({ shortlink });
-        } else if (error?.response?.status === 429) {
+        } else if (axiosError?.response?.status === 429) {
           return res.status(429).json({ message: "Rate limit exceeded. Please wait before creating more shortlinks." });
         } else {
-          console.error("Failed to create shortlink:", error?.response?.data || error?.message);
+          console.error("Failed to create shortlink:", axiosError?.response?.data || axiosError?.message);
           return res.status(500).json({ message: "Failed to create shortlink" });
         }
       }
