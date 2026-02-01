@@ -858,6 +858,7 @@ function HomeContent() {
         <footer className="py-12 bg-[#1a1a2e] text-amber-100 text-center px-4">
           <h2 className="font-script text-3xl md:text-4xl mb-4">Dimas & Davina</h2>
           <p className="opacity-50 text-xs md:text-sm">Created with Love • 2026</p>
+          <p className="opacity-50 text-xs md:text-sm mt-4"><a href="https://github.com/ujangPNG">Made by ujangPNG</a></p>
         </footer>
       </div>
     </>
