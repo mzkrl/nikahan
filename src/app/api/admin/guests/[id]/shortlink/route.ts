@@ -107,8 +107,11 @@ export async function POST(
         const inviteUrl = `${baseUrl}/?guest=${guest.slug}`;
 
         // Generate shortlink
-        // We prioritize using the guest's slug for a pretty URL
-        const shortlink = await createShortlink(inviteUrl, guest.slug);
+        // Use first name only for shorter URL as requested
+        // Example: "Muhammad Rizky" -> "muhammad"
+        const firstNameSlug = guest.name.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        const shortlink = await createShortlink(inviteUrl, firstNameSlug);
 
         console.log(`Generated shortlink for ${guest.name}: ${shortlink}`);
 
