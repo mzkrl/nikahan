@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+:root {
+  --font-serif: 'Cormorant Garamond', serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-script: 'Cinzel Decorative', cursive;
+
+  /* Elegant Gold & Cream Palette */
+  --background: 40 33% 98%;
+  --foreground: 30 15% 25%;
+
+  --primary: 38 45% 55%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 40 20% 94%;
+  --secondary-foreground: 30 15% 25%;
+
+  --muted: 40 10% 90%;
+  --muted-foreground: 30 10% 50%;
+
+  --accent: 38 60% 75%;
+  --accent-foreground: 30 15% 25%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 38 30% 85%;
+  --input: 38 30% 90%;
+  --ring: 38 45% 55%;
+
+  --radius: 0.75rem;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-serif);
+  letter-spacing: 0.05em;
+}
+
+.font-script {
+  font-family: var(--font-script);
+}
+
+.bg-background {
+  background-color: hsl(var(--background));
+}
+
+.bg-foreground {
+  background-color: hsl(var(--foreground));
+}
+
+.bg-primary {
+  background-color: hsl(var(--primary));
+}
+
+.bg-secondary {
+  background-color: hsl(var(--secondary));
+}
+
+.bg-muted {
+  background-color: hsl(var(--muted));
+}
+
+.bg-accent {
+  background-color: hsl(var(--accent));
+}
+
+.text-foreground {
+  color: hsl(var(--foreground));
+}
+
+.text-primary {
+  color: hsl(var(--primary));
+}
+
+.text-primary-foreground {
+  color: hsl(var(--primary-foreground));
+}
+
+.text-secondary-foreground {
+  color: hsl(var(--secondary-foreground));
+}
+
+.text-muted-foreground {
+  color: hsl(var(--muted-foreground));
+}
+
+.border-border {
+  border-color: hsl(var(--border));
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.3);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.5);
+}
