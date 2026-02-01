@@ -9,39 +9,58 @@ async function checkAdmin() {
     return session?.value === "authenticated";
 }
 
-// Generate shortlink using external API or create a simple one
-async function createShortlink(url: string): Promise<string | null> {
+// Generate shortlink using ze4.me API
+async function createShortlink(url: string, preferredSlug?: string): Promise<string | null> {
     const apiKey = process.env.SHORTLINK_API_KEY;
 
-    // If no API key, create a simple hash-based shortlink simulation
     if (!apiKey) {
-        // Just return the original URL as fallback
+        console.warn("SHORTLINK_API_KEY missing");
         return url;
     }
 
-    try {
-        // Using a free shortlink API (you can replace with your preferred service)
-        const response = await fetch("https://api.tinyurl.com/create", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                url: url,
-                domain: "tinyurl.com",
-            }),
-        });
+    // Helper to call API
+    const callApi = async (body: any) => {
+        try {
+            const response = await fetch("https://ze4.me/api/shortlinks", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-API-Key": apiKey,
+                },
+                body: JSON.stringify(body),
+            });
 
-        if (response.ok) {
+            if (!response.ok) {
+                const text = await response.text();
+                console.error("Shortlink API error:", response.status, text);
+                return null;
+            }
+
             const data = await response.json();
-            return data.data?.tiny_url || url;
+            // Assuming ze4.me returns { shortUrl: "..." } or similar. 
+            // Based on standard APIs, let's look for the url field.
+            // If the user didn't specify the response format, I will log it for debugging if it fails.
+            // But let's assume standard structure or return the full object to inspect if needed.
+            // Common patterns: data.shortUrl, data.link, data.url
+            return data.shortUrl || data.link || data.url || (data.data && data.data.link);
+        } catch (error) {
+            console.error("Shortlink fetch error:", error);
+            return null;
         }
-    } catch (error) {
-        console.error("Shortlink API error:", error);
+    };
+
+    // 1. Try with preferred slug first
+    if (preferredSlug) {
+        // Cleaning slug to be URL safe just in case
+        const cleanSlug = preferredSlug.replace(/[^a-zA-Z0-9-_]/g, "-");
+        const result = await callApi({ url, slug: cleanSlug });
+        if (result) return result;
     }
 
-    return url;
+    // 2. Fallback to random slug if custom slug failed (likely duplicate) or no slug provided
+    console.log("Fallback to random slug shortlink...");
+    const result = await callApi({ url });
+    return result || url;
 }
 
 export async function POST(
@@ -65,17 +84,22 @@ export async function POST(
         // Build the full invite URL
         let baseUrl = process.env.PUBLIC_SITE_URL;
 
+        // Clean up base URL (remove comments, spaces, trailing slashes)
+        if (baseUrl) {
+            baseUrl = baseUrl.split('#')[0].trim().replace(/\/$/, "");
+        }
+
         if (!baseUrl) {
             baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
         }
 
-        // Remove trailing slash if present
-        baseUrl = baseUrl.replace(/\/$/, "");
-
         const inviteUrl = `${baseUrl}/?guest=${guest.slug}`;
 
         // Generate shortlink
-        const shortlink = await createShortlink(inviteUrl);
+        // We prioritize using the guest's slug for a pretty URL
+        const shortlink = await createShortlink(inviteUrl, guest.slug);
+
+        console.log(`Generated shortlink for ${guest.name}: ${shortlink}`);
 
         // Update guest with shortlink
         const [updated] = await db
