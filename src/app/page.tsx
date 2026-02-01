@@ -20,11 +20,10 @@ interface Guest {
   wishes?: string;
 }
 
-// Music playlist
+// Music playlist configuration with start times (in seconds)
 const PLAYLIST = [
-  "/music/Lana Del Rey - Young and Beautiful.webm",
-  "/music/Shane Filan - Beautiful In White.webm",
-  "/music/Wedding Nasheed.webm"
+  { src: "/music/Lana Del Rey - Young and Beautiful.webm", start: 148 }, // 2:28
+  { src: "/music/Shane Filan - Beautiful In White.webm", start: 67 }     // 1:07
 ];
 
 // ==================== LOADER COMPONENT ====================
@@ -404,12 +403,22 @@ function HomeContent() {
     }
   }, [guestSlug]);
 
-  const handlePlayMusic = () => {
+  const playAudio = () => {
     if (audioRef.current) {
       audioRef.current.volume = 0.5;
-      audioRef.current.play().catch(() => setIsMuted(true));
-      setIsMuted(false);
+      // Seek to start time if it's the first play or changed song
+      // We handle seek in onLoadedMetadata, but here we just ensure play
+      audioRef.current.play().then(() => {
+        setIsMuted(false);
+      }).catch(e => {
+        console.warn("Autoplay blocked:", e);
+        setIsMuted(true);
+      });
     }
+  };
+
+  const handlePlayMusic = () => {
+    playAudio();
   };
 
   const handleSongEnd = () => {
@@ -420,24 +429,39 @@ function HomeContent() {
     setCurrentSongIndex(nextIndex);
   };
 
-  useEffect(() => {
-    if (audioRef.current && !isMuted && !showWelcome && !loading) {
-      audioRef.current.play().catch(() => setIsMuted(true));
-    }
-  }, [currentSongIndex]);
-
-  const toggleMusic = () => {
+  // Handle song change and seeking
+  const handleUnmute = () => {
     if (audioRef.current) {
       if (isMuted) {
-        audioRef.current.volume = 0.5;
-        audioRef.current.play();
-        setIsMuted(false);
+        // If we are unmuting, check if we need to seek (if currently at 0)
+        if (audioRef.current.currentTime < PLAYLIST[currentSongIndex].start) {
+          audioRef.current.currentTime = PLAYLIST[currentSongIndex].start;
+        }
+        playAudio();
       } else {
         audioRef.current.pause();
         setIsMuted(true);
       }
     }
   };
+
+  // Attempt autoplay when loading finishes
+  useEffect(() => {
+    if (!loading && audioRef.current && !showWelcome) {
+      // Set start time immediately
+      audioRef.current.currentTime = PLAYLIST[currentSongIndex].start;
+      playAudio();
+    }
+  }, [loading, showWelcome]);
+
+  // When song index changes, update source and seek
+  useEffect(() => {
+    if (audioRef.current && !loading) {
+      // Wait for metadata to load to seek? 
+      // Actually the audio tag src changes, we can set currentTime after it acts. 
+      // Better to do it in onLoadedMetadata
+    }
+  }, [currentSongIndex, loading]);
 
   return (
     <>
@@ -461,9 +485,19 @@ function HomeContent() {
 
       <audio
         ref={audioRef}
-        src={PLAYLIST[currentSongIndex]}
+        src={PLAYLIST[currentSongIndex].src}
         onEnded={handleSongEnd}
         preload="auto"
+        onLoadedMetadata={(e) => {
+          const audio = e.currentTarget;
+          // If the current time is 0 (fresh load), seek to start
+          if (audio.currentTime === 0) {
+            audio.currentTime = PLAYLIST[currentSongIndex].start;
+          }
+          if (!isMuted && !loading && !showWelcome) {
+            audio.play().catch(() => setIsMuted(true));
+          }
+        }}
       />
 
       {/* FAB Music */}
@@ -471,7 +505,7 @@ function HomeContent() {
         <motion.button
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          onClick={toggleMusic}
+          onClick={handleUnmute}
           className="fixed bottom-6 right-6 z-50 p-3 md:p-4 rounded-full text-white shadow-2xl glass-effect"
           style={{ backgroundColor: "rgba(201, 160, 80, 0.9)", backdropFilter: "blur(4px)" }}
           whileTap={{ scale: 0.9 }}
