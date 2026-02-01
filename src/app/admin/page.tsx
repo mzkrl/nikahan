@@ -35,6 +35,8 @@ export default function AdminPage() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [newGuestName, setNewGuestName] = useState("");
     const [newGuestPhone, setNewGuestPhone] = useState("");
+    const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
+    const [showRecap, setShowRecap] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -157,9 +159,63 @@ export default function AdminPage() {
         }
     };
 
+    const handleBulkGenerate = async () => {
+        // Filter guests needing shortlink (empty or invalid JSON)
+        const targets = guests.filter(g => !g.shortlink || g.shortlink.startsWith("{"));
+
+        if (targets.length === 0) {
+            alert("All guests already have valid shortlinks!");
+            return;
+        }
+
+        if (!confirm(`This will generate shortlinks for ${targets.length} guests.\nDue to rate limits (20/min), this will take about ${Math.ceil(targets.length * 3.5 / 60)} minutes.\nKeep this page open.`)) {
+            return;
+        }
+
+        setBulkProgress({ current: 0, total: targets.length });
+
+        for (let i = 0; i < targets.length; i++) {
+            const guest = targets[i];
+
+            try {
+                // Call API
+                const res = await fetch(`/api/admin/guests/${guest.id}/shortlink`, { method: "POST" });
+                if (res.ok) {
+                    const updatedGuest = await res.json();
+
+                    // Update local state immediately to reflect progress
+                    setGuests(prev => prev.map(p => p.id === guest.id ? updatedGuest : p));
+                }
+            } catch (error) {
+                console.error(`Failed to generate for ${guest.name}`, error);
+            }
+
+            // Update progress
+            setBulkProgress({ current: i + 1, total: targets.length });
+
+            // Wait 3.5 seconds to respect 20 req/min rate limit (60s/20 = 3s => use 3.5s for safety)
+            if (i < targets.length - 1) {
+                await new Promise(r => setTimeout(r, 3500));
+            }
+        }
+
+        setBulkProgress(null);
+        alert("Bulk generation complete!");
+        setShowRecap(true);
+    };
+
     const getInviteLink = (slug: string) => {
         const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
         return `${baseUrl}/?guest=${slug}`;
+    };
+
+    const getRecapText = () => {
+        return guests.map(g => {
+            const link = g.shortlink && !g.shortlink.startsWith("{")
+                ? g.shortlink
+                : getInviteLink(g.slug);
+            return `${g.name}\n${link}`;
+        }).join("\n\n");
     };
 
     const copyToClipboard = (text: string, label: string) => {
@@ -226,12 +282,43 @@ export default function AdminPage() {
         <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
             {/* Header */}
             <header className="bg-white border-b border-amber-100 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
                     <div>
                         <h1 className="text-xl font-bold text-gray-800">Wedding Admin</h1>
                         <p className="text-sm text-gray-500">Dimas & Davina</p>
                     </div>
-                    <div className="flex items-center gap-4">
+
+                    {/* Bulk Actions */}
+                    <div className="flex items-center gap-2">
+                        {bulkProgress ? (
+                            <div className="flex items-center gap-3 px-4 py-2 bg-amber-100 text-amber-800 rounded-lg animate-pulse">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span className="font-medium text-sm">
+                                    Processing {bulkProgress.current}/{bulkProgress.total}
+                                </span>
+                            </div>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={handleBulkGenerate}
+                                    className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg transition-colors text-sm font-medium"
+                                    title="Generate missing shortlinks (Safe Rate Limit)"
+                                >
+                                    <ExternalLink className="w-4 h-4" />
+                                    Generate All
+                                </button>
+                                <button
+                                    onClick={() => setShowRecap(true)}
+                                    className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    <Copy className="w-4 h-4" />
+                                    Copy Recap
+                                </button>
+                            </>
+                        )}
+
+                        <div className="h-6 w-px bg-gray-200 mx-2 hidden md:block" />
+
                         <button
                             onClick={fetchData}
                             className="p-2 text-gray-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
@@ -241,10 +328,10 @@ export default function AdminPage() {
                         </button>
                         <button
                             onClick={handleLogout}
-                            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Logout"
                         >
-                            <LogOut className="w-4 h-4" />
-                            <span className="hidden sm:inline">Logout</span>
+                            <LogOut className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
@@ -295,6 +382,45 @@ export default function AdminPage() {
                                 <div>
                                     <p className="text-2xl font-bold text-gray-600">{stats.pending}</p>
                                     <p className="text-sm text-gray-500">Pending</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Recap Modal */}
+                {showRecap && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                                <h3 className="text-lg font-bold text-gray-800">Recap & Ready to Share</h3>
+                                <button onClick={() => setShowRecap(false)} className="text-gray-400 hover:text-gray-600">
+                                    <span className="text-2xl">&times;</span>
+                                </button>
+                            </div>
+                            <div className="p-6 flex-1 overflow-hidden flex flex-col gap-4">
+                                <p className="text-sm text-gray-500">
+                                    Berikut adalah daftar semua tamu beserta link undangannya. Klik Copy All untuk menyalin semua.
+                                </p>
+                                <textarea
+                                    readOnly
+                                    className="w-full h-64 p-4 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm resize-none focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                                    value={getRecapText()}
+                                />
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => copyToClipboard(getRecapText(), "All links")}
+                                        className="flex-1 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Copy className="w-4 h-4" />
+                                        Copy All
+                                    </button>
+                                    <button
+                                        onClick={() => setShowRecap(false)}
+                                        className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-all"
+                                    >
+                                        Close
+                                    </button>
                                 </div>
                             </div>
                         </div>
