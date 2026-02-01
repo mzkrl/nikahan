@@ -743,22 +743,20 @@ function HomeContent() {
                     <div className="w-4 h-4 md:w-6 md:h-6 bg-amber-500 rounded-full border-4 border-amber-100" />
                   </div>
 
-                  {/* Spacer for Desktop Alignment */}
-                  {item.align === "right" ? <div className="hidden md:block" /> : null}
-
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className={`col-start-2 bg-white p-6 rounded-2xl shadow-sm border border-amber-100 relative ${item.align === "left" && "md:text-right"}`}
+                    className={`
+                      bg-white p-6 rounded-2xl shadow-sm border border-amber-100 relative
+                      col-start-2 
+                      ${item.align === "left" ? "md:col-start-1 md:text-right md:mr-10" : "md:col-start-2 md:text-left md:ml-10"}
+                    `}
                   >
-                    <span className="text-4xl font-bold text-amber-100 absolute top-2 right-4 md:left-auto md:right-4 select-none">{item.year}</span>
+                    <span className={`text-4xl font-bold text-amber-100 absolute top-2 select-none ${item.align === "left" ? "right-4 md:right-auto md:left-4" : "right-4"}`}>{item.year}</span>
                     <h3 className="text-lg md:text-xl font-bold text-amber-700 mb-2 relative z-10">{item.title}</h3>
                     <p className="text-sm md:text-base text-gray-600 relative z-10">{item.desc}</p>
                   </motion.div>
-
-                  {/* Spacer for Desktop Alignment */}
-                  {item.align === "left" ? <div className="hidden md:block" /> : null}
                 </div>
               ))}
             </div>
