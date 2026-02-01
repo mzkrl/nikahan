@@ -19,7 +19,7 @@ export const Section = ({ children, className, id, parallax = false, ...props }:
   useEffect(() => {
     const el = sectionRef.current;
     const content = contentRef.current;
-    
+
     if (!el || !content) return;
 
     if (parallax) {
@@ -60,7 +60,7 @@ export const Section = ({ children, className, id, parallax = false, ...props }:
       ref={sectionRef}
       id={id}
       className={cn(
-        "relative min-h-screen w-full flex items-center justify-center overflow-hidden py-24 px-4 sm:px-6 lg:px-8",
+        "relative min-h-screen w-full flex items-center justify-center overflow-hidden py-12 md:py-24 px-4 sm:px-6 lg:px-8",
         className
       )}
       {...props}

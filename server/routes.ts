@@ -7,8 +7,10 @@ import axios, { AxiosError } from "axios";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import crypto from "crypto";
+import dotenv from "dotenv";
+dotenv.config();
 
-const API_KEY = "nCSthEqZ1hMo8ivkjF2ugQWUsgW0YDuTdIcz9UgFkGE";
+const API_KEY = process.env.SHORTLINK_API_KEY || "nCSthEqZ1hMo8ivkjF2ugQWUsgW0YDuTdIcz9UgFkGE";
 const SHORTLINK_API = "https://ze4.me/api/shortlinks";
 
 // Extend express-session types
@@ -27,17 +29,17 @@ function generateCsrfToken(): string {
 // CSRF validation middleware for admin routes
 function validateCsrf(req: Request, res: Response, next: NextFunction) {
   // Skip CSRF validation for login (initial session creation) and GET requests
-  if (req.method === "GET" || req.path === api.admin.login.path) {
+  if (req.method === "GET" || (req.baseUrl + req.path) === api.admin.login.path) {
     return next();
   }
-  
+
   const headerToken = req.headers["x-csrf-token"];
   const sessionToken = req.session?.csrfToken;
-  
+
   if (!headerToken || !sessionToken || headerToken !== sessionToken) {
     return res.status(403).json({ message: "Invalid CSRF token" });
   }
-  
+
   return next();
 }
 
@@ -106,7 +108,7 @@ export async function registerRoutes(
 
   // Admin Routes - Apply CSRF validation
   app.use("/api/admin", validateCsrf);
-  
+
   app.post(api.admin.login.path, (req, res) => {
     try {
       const { password } = api.admin.login.input.parse(req.body);
@@ -139,7 +141,7 @@ export async function registerRoutes(
   });
 
   app.get(api.admin.checkAuth.path, (req, res) => {
-    res.json({ 
+    res.json({
       authenticated: !!req.session?.isAdmin,
       csrfToken: req.session?.csrfToken
     });
@@ -161,14 +163,14 @@ export async function registerRoutes(
     try {
       const { name, phone } = api.admin.createGuest.input.parse(req.body);
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      
+
       const guest = await storage.createGuest({
         name,
         slug,
         phone: phone || null,
         attendanceStatus: "pending",
       });
-      
+
       res.json(guest);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -185,12 +187,12 @@ export async function registerRoutes(
     try {
       const id = parseInt(String(req.params.id));
       const updates = api.admin.updateGuest.input.parse(req.body);
-      
+
       const existing = await storage.getGuest(id);
       if (!existing) {
         return res.status(404).json({ message: "Guest not found" });
       }
-      
+
       const updatedGuest = await storage.updateGuest(id, updates);
       res.json(updatedGuest);
     } catch (err) {
@@ -208,11 +210,11 @@ export async function registerRoutes(
     try {
       const id = parseInt(String(req.params.id));
       const deleted = await storage.deleteGuest(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Guest not found" });
       }
-      
+
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
@@ -223,7 +225,7 @@ export async function registerRoutes(
     try {
       const id = parseInt(String(req.params.id));
       const guest = await storage.getGuest(id);
-      
+
       if (!guest) {
         return res.status(404).json({ message: "Guest not found" });
       }
@@ -243,10 +245,10 @@ export async function registerRoutes(
             "X-API-Key": API_KEY
           }
         });
-        
+
         const shortlink = `https://ze4.me/${guest.slug}`;
         await storage.updateGuest(id, { shortlink });
-        
+
         res.json({ shortlink });
       } catch (error: unknown) {
         const axiosError = error as AxiosError;

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,31 +7,36 @@
 :root {
   --font-serif: 'Playfair Display', serif;
   --font-sans: 'Montserrat', sans-serif;
-  --font-script: 'Great Vibes', cursive;
+  --font-script: 'Cinzel Decorative', cursive;
 
   /* Elegant Gold & Cream Palette */
-  --background: 40 33% 98%;      /* Creamy off-white */
-  --foreground: 30 15% 25%;      /* Dark charcoal/brown for text */
-  
-  --primary: 38 45% 55%;         /* Muted Gold */
+  --background: 40 33% 98%;
+  /* Creamy off-white */
+  --foreground: 30 15% 25%;
+  /* Dark charcoal/brown for text */
+
+  --primary: 38 45% 55%;
+  /* Muted Gold */
   --primary-foreground: 0 0% 100%;
-  
-  --secondary: 40 20% 94%;       /* Light beige for cards/sections */
+
+  --secondary: 40 20% 94%;
+  /* Light beige for cards/sections */
   --secondary-foreground: 30 15% 25%;
-  
+
   --muted: 40 10% 90%;
   --muted-foreground: 30 10% 50%;
-  
-  --accent: 38 60% 75%;          /* Lighter gold for accents */
+
+  --accent: 38 60% 75%;
+  /* Lighter gold for accents */
   --accent-foreground: 30 15% 25%;
-  
+
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
-  
+
   --border: 38 30% 85%;
   --input: 38 30% 90%;
   --ring: 38 45% 55%;
-  
+
   --radius: 0.75rem;
 }
 
@@ -39,22 +44,22 @@
   /* Dark Luxury Theme */
   --background: 30 10% 10%;
   --foreground: 40 33% 95%;
-  
+
   --primary: 38 50% 60%;
   --primary-foreground: 30 10% 10%;
-  
+
   --secondary: 30 10% 15%;
   --secondary-foreground: 40 33% 95%;
-  
+
   --muted: 30 10% 20%;
   --muted-foreground: 40 10% 70%;
-  
+
   --accent: 38 50% 30%;
   --accent-foreground: 40 33% 95%;
-  
+
   --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 98%;
-  
+
   --border: 30 10% 25%;
   --input: 30 10% 25%;
   --ring: 38 50% 60%;
@@ -65,8 +70,13 @@
     @apply bg-background text-foreground antialiased selection:bg-primary/20;
     font-family: var(--font-sans);
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-serif);
     @apply tracking-wide;
   }
@@ -86,13 +96,16 @@
 ::-webkit-scrollbar {
   width: 10px;
 }
+
 ::-webkit-scrollbar-track {
   background: hsl(var(--background));
 }
+
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--primary) / 0.3);
   border-radius: 5px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--primary) / 0.5);
 }

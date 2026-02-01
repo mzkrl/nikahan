@@ -7,7 +7,15 @@ Place your music file here:
 You can download it using yt-dlp:
 
 ```bash
-yt-dlp -x --audio-format mp3 -o "young-and-beautiful.%(ext)s" "https://www.youtube.com/watch?v=..." 
+yt-dlp -x --audio-format mp3 --audio-quality 0 https://www.youtube.com/watch?v=o_1aF54DO60&list=RDo_1aF54DO60&start_radio=1
+```
+
+```bash
+yt-dlp -x --audio-format mp3 --audio-quality 0 https://www.youtube.com/watch?v=o_1aF54DO60&list=RDo_1aF54DO60&start_radio=1
+```
+
+```bash
+yt-dlp -x --audio-format mp3 --audio-quality 0 https://www.youtube.com/watch?v=o_1aF54DO60&list=RDo_1aF54DO60&start_radio=1
 ```
 
 Replace the YouTube URL with the actual link to "Young & Beautiful" by Lana Del Rey.
