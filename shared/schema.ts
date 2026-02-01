@@ -7,6 +7,7 @@ export const guests = pgTable("guests", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   shortlink: text("shortlink"),
+  phone: text("phone"),
   attendanceStatus: text("attendance_status").default("pending"), // pending, present, absent
   wishes: text("wishes"),
   createdAt: timestamp("created_at").defaultNow(),

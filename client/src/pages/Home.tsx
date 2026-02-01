@@ -1,12 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useGuestBySlug } from "@/hooks/use-guests";
 import { Section } from "@/components/Section";
 import { WeddingMap } from "@/components/WeddingMap";
 import { RSVPForm } from "@/components/RSVPForm";
-import { Calendar, Clock, MapPin, Heart, Music, Camera } from "lucide-react";
+import { WelcomeOverlay } from "@/components/WelcomeOverlay";
+import { Calendar, Clock, MapPin, Heart, Music, Camera, Volume2, VolumeX } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import gsap from "gsap";
+import { AnimatePresence } from "framer-motion";
 
 export default function Home() {
   const [location] = useLocation();
@@ -15,17 +17,50 @@ export default function Home() {
   
   const { data: guest, isLoading } = useGuestBySlug(guestSlug);
   
-  // Audio ref for background music (optional enhancement)
+  // State for welcome overlay - only show once per session for guests
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Reveal animation for hero text on load
-    gsap.fromTo(
-      ".hero-text", 
-      { y: 100, opacity: 0 }, 
-      { y: 0, opacity: 1, duration: 1.5, stagger: 0.2, ease: "power3.out", delay: 0.5 }
-    );
-  }, []);
+    // Check if we should show welcome overlay (only for guests, only once per session)
+    if (guest && guestSlug) {
+      const hasSeenWelcome = sessionStorage.getItem(`welcome-${guestSlug}`);
+      if (!hasSeenWelcome) {
+        setShowWelcome(true);
+      }
+    }
+  }, [guest, guestSlug]);
+
+  useEffect(() => {
+    // Reveal animation for hero text on load (only when welcome is not showing)
+    if (!showWelcome) {
+      gsap.fromTo(
+        ".hero-text", 
+        { y: 100, opacity: 0 }, 
+        { y: 0, opacity: 1, duration: 1.5, stagger: 0.2, ease: "power3.out", delay: 0.5 }
+      );
+    }
+  }, [showWelcome]);
+
+  const handleWelcomeComplete = () => {
+    if (guestSlug) {
+      sessionStorage.setItem(`welcome-${guestSlug}`, "true");
+    }
+    setShowWelcome(false);
+  };
+
+  const toggleMusic = () => {
+    if (audioRef.current) {
+      if (isMuted) {
+        audioRef.current.play().catch(console.error);
+        audioRef.current.muted = false;
+      } else {
+        audioRef.current.muted = true;
+      }
+      setIsMuted(!isMuted);
+    }
+  };
 
   if (isLoading && guestSlug) {
     return (
@@ -36,12 +71,38 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-background text-foreground overflow-x-hidden font-sans selection:bg-primary/30">
-      
-      {/* BACKGROUND ELEMENTS */}
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03]" 
-           style={{ backgroundImage: `url("https://www.transparenttextures.com/patterns/cubes.png")` }}>
-      </div>
+    <>
+      {/* Welcome Overlay for guests */}
+      <AnimatePresence>
+        {showWelcome && guest && (
+          <WelcomeOverlay guest={guest} onComplete={handleWelcomeComplete} />
+        )}
+      </AnimatePresence>
+
+      {/* Background Music */}
+      <audio ref={audioRef} loop>
+        <source src="/music/young-and-beautiful.mp3" type="audio/mpeg" />
+      </audio>
+
+      {/* Music Toggle Button - fixed position */}
+      <button
+        onClick={toggleMusic}
+        className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-primary/90 hover:bg-primary text-white shadow-lg transition-all duration-300 hover:scale-110"
+        aria-label={isMuted ? "Play music" : "Mute music"}
+      >
+        {isMuted ? (
+          <VolumeX className="w-6 h-6" />
+        ) : (
+          <Volume2 className="w-6 h-6" />
+        )}
+      </button>
+
+      <div className="bg-background text-foreground overflow-x-hidden font-sans selection:bg-primary/30">
+        
+        {/* BACKGROUND ELEMENTS */}
+        <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03]" 
+             style={{ backgroundImage: `url("https://www.transparenttextures.com/patterns/cubes.png")` }}>
+        </div>
 
       {/* HERO SECTION */}
       <section className="relative h-screen w-full flex flex-col items-center justify-center text-center px-4 overflow-hidden">
@@ -292,6 +353,7 @@ export default function Home() {
           &copy; 2025 All Rights Reserved
         </p>
       </footer>
-    </div>
+      </div>
+    </>
   );
 }
