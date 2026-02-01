@@ -1,83 +1,86 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { api, errorSchemas } from "@shared/routes";
+import { api } from "@shared/routes";
 import { z } from "zod";
-import axios from "axios";
-
-const GUEST_LIST = [
-  "AFDA ANDIKA KAYDE RUKAWA", "AHMAD AIDUL QAMIL", "AHMAD FAUZAN", "ALAN SUROTO AMARTYA",
-  "ALFAREDZI DINOVA", "ALFATIHA GALUH", "ANGGATRA SATYA PUTRA NUGROHO", "ANSELMUS KARTONO BANGGUR",
-  "APRILIA INTANI", "DAVINA ANANDIA", "DELVINO BERNARDO ABELARD PASARIBU", "DENENDRA RAHADYAN DANARDI",
-  "DIMAS SAKTIAWAN", "ENRIQOE VAZQUEZ", "ERGA PIERO", "EVI VANI RONA ULI SIRAIT",
-  "FAREL AGUSTINUS SILALAHI", "GIANDRA VALENTINO SUAJI ERWANTO", "GRACE MARIN SITANGGANG", "HAIKAL IDRIS",
-  "HIKAM ZIDAN RAMADHAN", "HOSHI UKASYAH ALUWIH", "IRSYAD RAMADHAN ABIDIN", "JUANG DANOVADIL FAOMASI ZEBUA",
-  "MIKAEL FEBRIAN", "MUFID PERDANA", "MUHAMMAD DWIMI HANIF AL GHIFARI", "MUHAMMAD GILANG ARRASYID",
-  "MUHAMMAD RAFFI FARDAN AL AFFAN", "MUHAMMAD ROMAN KHAIRUL AZZAM", "RAUF WILDAN SANJAYA",
-  "RAY ALLAND MOURICE LUMOPA", "RIZKI ABDILLAH BAHRI", "RIZKY DAWAM NURRAHMAN",
-  "RIZKY FADHLURRAHMAN RAMADHAN", "SULTAN HARUNSYAH PUTERA ANDJALI", "ZUFAR RAFID IRAWAN"
-];
+import axios, { AxiosError } from "axios";
+import session from "express-session";
+import MemoryStore from "memorystore";
+import crypto from "crypto";
 
 const API_KEY = "nCSthEqZ1hMo8ivkjF2ugQWUsgW0YDuTdIcz9UgFkGE";
 const SHORTLINK_API = "https://ze4.me/api/shortlinks";
 
-async function seedGuests() {
-  const existingGuests = await storage.getGuests();
-  if (existingGuests.length > 0) return;
-
-  console.log("Seeding guests...");
-  const appUrl = `https://${process.env.REPLIT_SLUG}.${process.env.REPLIT_USER}.replit.dev`;
-
-  for (const name of GUEST_LIST) {
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    let shortlink = "";
-
-    try {
-      // Create shortlink
-      const response = await axios.post(SHORTLINK_API, {
-        url: `${appUrl}/?guest=${slug}`,
-        slug: slug
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": API_KEY
-        }
-      });
-      
-      // Assuming the API returns the created shortlink or we construct it
-      shortlink = `ze4.me/${slug}`; 
-      console.log(`Created shortlink for ${name}: ${shortlink}`);
-    } catch (error) {
-      console.error(`Failed to create shortlink for ${name}:`, error instanceof Error ? error.message : String(error));
-      // Fallback if API fails, still create guest
-      shortlink = `ze4.me/${slug} (failed to register)`;
-    }
-
-    await storage.createGuest({
-      name,
-      slug,
-      shortlink,
-      attendanceStatus: "pending"
-    });
+// Extend express-session types
+declare module "express-session" {
+  interface SessionData {
+    isAdmin: boolean;
+    csrfToken: string;
   }
-  console.log("Seeding complete.");
+}
+
+// Generate CSRF token
+function generateCsrfToken(): string {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+// CSRF validation middleware for admin routes
+function validateCsrf(req: Request, res: Response, next: NextFunction) {
+  // Skip CSRF validation for login (initial session creation) and GET requests
+  if (req.method === "GET" || req.path === api.admin.login.path) {
+    return next();
+  }
+  
+  const headerToken = req.headers["x-csrf-token"];
+  const sessionToken = req.session?.csrfToken;
+  
+  if (!headerToken || !sessionToken || headerToken !== sessionToken) {
+    return res.status(403).json({ message: "Invalid CSRF token" });
+  }
+  
+  return next();
+}
+
+// Admin authentication middleware
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.session?.isAdmin) {
+    return next();
+  }
+  return res.status(401).json({ message: "Unauthorized" });
 }
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Seeding
-  seedGuests().catch(console.error);
+  // Session setup
+  const MemStore = MemoryStore(session);
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || "default-session-secret-change-in-production",
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: process.env.NODE_ENV === "production",
+        httpOnly: true,
+        sameSite: "strict", // CSRF protection
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      },
+      store: new MemStore({
+        checkPeriod: 86400000, // prune expired entries every 24h
+      }),
+    })
+  );
 
-  // API Routes
+  // Public API Routes
   app.get(api.guests.list.path, async (req, res) => {
     const guests = await storage.getGuests();
     res.json(guests);
   });
 
   app.get(api.guests.getBySlug.path, async (req, res) => {
-    const guest = await storage.getGuestBySlug(req.params.slug);
+    const slug = String(req.params.slug);
+    const guest = await storage.getGuestBySlug(slug);
     if (!guest) {
       return res.status(404).json({ message: "Guest not found" });
     }
@@ -86,7 +89,7 @@ export async function registerRoutes(
 
   app.patch(api.guests.update.path, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       const updates = api.guests.update.input.parse(req.body);
       const updatedGuest = await storage.updateGuest(id, updates);
       res.json(updatedGuest);
@@ -97,6 +100,169 @@ export async function registerRoutes(
           field: err.errors[0].path.join('.'),
         });
       }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin Routes - Apply CSRF validation
+  app.use("/api/admin", validateCsrf);
+  
+  app.post(api.admin.login.path, (req, res) => {
+    try {
+      const { password } = api.admin.login.input.parse(req.body);
+      const adminPassword = process.env.ADMIN;
+
+      if (!adminPassword) {
+        return res.status(500).json({ message: "Admin password not configured" });
+      }
+
+      if (password === adminPassword) {
+        req.session.isAdmin = true;
+        // Generate CSRF token on successful login
+        req.session.csrfToken = generateCsrfToken();
+        return res.json({ success: true, csrfToken: req.session.csrfToken });
+      }
+
+      return res.status(401).json({ message: "Invalid password" });
+    } catch (err) {
+      return res.status(400).json({ message: "Invalid request" });
+    }
+  });
+
+  app.post(api.admin.logout.path, (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  app.get(api.admin.checkAuth.path, (req, res) => {
+    res.json({ 
+      authenticated: !!req.session?.isAdmin,
+      csrfToken: req.session?.csrfToken
+    });
+  });
+
+  app.get(api.admin.stats.path, requireAdmin, async (req, res) => {
+    const guests = await storage.getGuests();
+    const stats = {
+      total: guests.length,
+      present: guests.filter(g => g.attendanceStatus === "present").length,
+      absent: guests.filter(g => g.attendanceStatus === "absent").length,
+      pending: guests.filter(g => g.attendanceStatus === "pending").length,
+      guests,
+    };
+    res.json(stats);
+  });
+
+  app.post(api.admin.createGuest.path, requireAdmin, async (req, res) => {
+    try {
+      const { name, phone } = api.admin.createGuest.input.parse(req.body);
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      
+      const guest = await storage.createGuest({
+        name,
+        slug,
+        phone: phone || null,
+        attendanceStatus: "pending",
+      });
+      
+      res.json(guest);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch(api.admin.updateGuest.path, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      const updates = api.admin.updateGuest.input.parse(req.body);
+      
+      const existing = await storage.getGuest(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+      
+      const updatedGuest = await storage.updateGuest(id, updates);
+      res.json(updatedGuest);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete(api.admin.deleteGuest.path, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      const deleted = await storage.deleteGuest(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post(api.admin.createShortlink.path, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      const guest = await storage.getGuest(id);
+      
+      if (!guest) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+
+      // Get the app URL - use request host for Vercel compatibility
+      const protocol = req.headers['x-forwarded-proto'] || 'https';
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const appUrl = `${protocol}://${host}`;
+
+      try {
+        await axios.post(SHORTLINK_API, {
+          url: `${appUrl}/?guest=${guest.slug}`,
+          slug: guest.slug
+        }, {
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": API_KEY
+          }
+        });
+        
+        const shortlink = `https://ze4.me/${guest.slug}`;
+        await storage.updateGuest(id, { shortlink });
+        
+        res.json({ shortlink });
+      } catch (error: unknown) {
+        const axiosError = error as AxiosError;
+        // If shortlink already exists (409 conflict), just use the existing one
+        if (axiosError?.response?.status === 409) {
+          const shortlink = `https://ze4.me/${guest.slug}`;
+          await storage.updateGuest(id, { shortlink });
+          res.json({ shortlink });
+        } else if (axiosError?.response?.status === 429) {
+          return res.status(429).json({ message: "Rate limit exceeded. Please wait before creating more shortlinks." });
+        } else {
+          console.error("Failed to create shortlink:", axiosError?.response?.data || axiosError?.message);
+          return res.status(500).json({ message: "Failed to create shortlink" });
+        }
+      }
+    } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }
   });

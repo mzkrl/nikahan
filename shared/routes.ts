@@ -57,6 +57,20 @@ export const api = {
         401: errorSchemas.unauthorized,
       },
     },
+    logout: {
+      method: 'POST' as const,
+      path: '/api/admin/logout',
+      responses: {
+        200: z.object({ success: z.boolean() }),
+      },
+    },
+    checkAuth: {
+      method: 'GET' as const,
+      path: '/api/admin/check',
+      responses: {
+        200: z.object({ authenticated: z.boolean() }),
+      },
+    },
     stats: {
       method: 'GET' as const,
       path: '/api/admin/stats',
@@ -69,6 +83,51 @@ export const api = {
           guests: z.array(z.custom<typeof guests.$inferSelect>()),
         }),
         401: errorSchemas.unauthorized,
+      },
+    },
+    createGuest: {
+      method: 'POST' as const,
+      path: '/api/admin/guests',
+      input: z.object({
+        name: z.string().min(1),
+        phone: z.string().optional(),
+      }),
+      responses: {
+        200: z.custom<typeof guests.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    updateGuest: {
+      method: 'PATCH' as const,
+      path: '/api/admin/guests/:id',
+      input: z.object({
+        name: z.string().optional(),
+        phone: z.string().optional(),
+        shortlink: z.string().optional(),
+      }),
+      responses: {
+        200: z.custom<typeof guests.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+      },
+    },
+    deleteGuest: {
+      method: 'DELETE' as const,
+      path: '/api/admin/guests/:id',
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        401: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+      },
+    },
+    createShortlink: {
+      method: 'POST' as const,
+      path: '/api/admin/guests/:id/shortlink',
+      responses: {
+        200: z.object({ shortlink: z.string() }),
+        401: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+        429: z.object({ message: z.string() }),
       },
     },
   }

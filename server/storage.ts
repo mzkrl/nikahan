@@ -8,6 +8,7 @@ export interface IStorage {
   getGuestBySlug(slug: string): Promise<Guest | undefined>;
   createGuest(guest: InsertGuest): Promise<Guest>;
   updateGuest(id: number, updates: Partial<Guest>): Promise<Guest>;
+  deleteGuest(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -37,6 +38,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(guests.id, id))
       .returning();
     return updated;
+  }
+
+  async deleteGuest(id: number): Promise<boolean> {
+    const result = await db.delete(guests).where(eq(guests.id, id)).returning();
+    return result.length > 0;
   }
 }
 
