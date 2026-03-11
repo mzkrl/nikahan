@@ -861,7 +861,7 @@ function HomeContent() {
 
           <div className="flex justify-center items-center gap-6 mt-8">
             <a
-              href="https://github.com/ujangPNG"
+              href="https://github.com/mzkrl"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-all hover:text-white group"
